@@ -1,0 +1,58 @@
+.tag {
+    display: inline-block;
+    background: #eee;
+    color: #333;
+    padding: .2rem .5rem;
+    border-radius: 999px;
+    font-size: .8rem
+}
+
+
+.quantity {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem
+}
+
+
+.quantity__btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer
+}
+
+
+.quantity__value {
+    min-width: 22px;
+    text-align: center
+}
+
+
+.admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    padding: .75rem 1rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, .08);
+}
+
+
+.admin-header__link {
+    margin-left: .75rem
+}
+
+
+.admin-main .card {
+    margin: .75rem 0
+}
+
+
+.admin-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem
+}

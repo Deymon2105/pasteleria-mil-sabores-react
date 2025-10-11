@@ -1,0 +1,58 @@
+.admin-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:#fff;
+    padding:.75rem 1rem;
+    box-shadow:0 10px 25px rgba(0,0,0,.08)
+}
+
+
+.admin-header__brand{
+    font-weight:900;
+    color:#8B4513
+}
+
+
+.admin-header__nav{
+    display:flex;
+    gap: .5rem
+}
+
+
+.admin-header__link{
+    color:#5D4037;
+    text-decoration:none
+}
+
+
+.admin-main{
+    padding:1rem 0
+}
+
+
+.admin-cards{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:1rem
+}
+
+
+.card{
+    background:#fff;
+    padding:1rem;
+    border-radius:12px
+}
+
+
+.product-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:1rem
+}
+
+
+.order-list{
+    display:grid;
+    gap:.5rem
+}
