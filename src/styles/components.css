@@ -56,3 +56,87 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem
 }
+
+
+/*estilos para el login y el registro */
+.login-container,
+.register-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-card,
+.register-card {
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    border: none;
+    border-radius: 12px;
+}
+
+.register-card {
+    max-width: 600px;
+}
+
+.login-card .card-body,
+.register-card .card-body {
+    padding: 2rem;
+}
+
+.benefits-alert {
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.benefits-alert h6 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.benefits-alert .badge {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+}
+
+/* estilos de los formularios */
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn-primary {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.btn-primary:hover {
+    background-color: #5568d3;
+    border-color: #4c5ec4;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-link {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.btn-link:hover {
+    color: #5568d3;
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .login-card .card-body,
+    .register-card .card-body {
+        padding: 1.5rem;
+    }
+}

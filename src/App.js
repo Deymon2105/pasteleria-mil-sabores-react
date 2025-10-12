@@ -16,6 +16,7 @@ import Dashboard from './admin/Dashboard'
 import OrdersAdmin from './admin/Orders'
 import ProductsAdmin from './admin/Products'
 import UsersAdmin from './admin/Users'
+import Register from './pages/Register';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/about" element={<About/>} />
           <Route path="/contacto" element={<Contacto/>} />
           <Route path="/login" element={<Login/>} />
+          <Route path="/register" element={<Register/>}/>
           <Route path="/cart" element={<Cart/>} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
