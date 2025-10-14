@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { Container, Form, Button, Alert, Card } from 'react-bootstrap';
@@ -9,19 +9,42 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => { 
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      navigate('/'); //redirigir si ya hay sesión activa
+    }
+  }, [navigate]);
+
   const onSubmit = async (data) => { //se ejecuta un función asincrona al enviar el formulario
     setError('');
     setLoading(true);
 
     try {
-      const users = JSON.parse(localStorage.getItem('users') || '[]'); //obtener usuarios del localStorage
-      const user = users.find(u => u.email === data.email && u.password === data.password);
+      let users = [];
+      try {
+        users = JSON.parse(localStorage.getItem('users') || '[]');
+        if (!Array.isArray(users)) throw new Error('Invalid users data');
+      } catch (e) {
+        // si users está corrupto, resetear a array vacío
+        users = [];
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+
+      const email = data.email.trim(); // trim por si quedan espacios alrededor
+      const password = data.password.trim();
+
+      const user = users.find(u => u.email === email && u.password === password);
 
       if (!user) {
         throw new Error('Email o contraseña incorrectos');
       }
-      localStorage.setItem('currentUser', JSON.stringify(user)); //guardar sesión
-      navigate('/dashboard'); // redirigir al dashboard
+
+      const { password: _, ...userWithoutPassword } = user;
+      localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword)); //guardar sesión
+      
+      window.dispatchEvent(new Event('userSessionChange')); // disparar evento para que el Header se actualice
+      navigate('/'); //enviar a la pantalla del home
     } catch (err) {
       setError(err.message);
     } finally {
@@ -46,7 +69,8 @@ export default function Login() {
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                     message: 'Email inválido'
-                  }
+                  },
+                  setValueAs: (value) => value.trim()
                 })}
                 isInvalid={!!errors.email}
               />
@@ -65,7 +89,8 @@ export default function Login() {
                   minLength: {
                     value: 6,
                     message: 'Mínimo 6 caracteres'
-                  }
+                  },
+                  setValueAs: (value) => value.trim()
                 })}
                 isInvalid={!!errors.password}
               />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { Container, Form, Button, Alert, Card, Badge, Row, Col } from 'react-bootstrap';
@@ -7,7 +7,16 @@ export default function Register() {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [benefitMessages, setBenefitMessages] = useState([]);
   const navigate = useNavigate();
+
+  //redirigir si ya hay sesión activa
+  useEffect(() => {
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser) {
+      navigate('/');
+    }
+  }, [navigate]);
 
   //función watch para validaciones en tiempo real
   const watchEmail = watch('email', '');
@@ -15,7 +24,7 @@ export default function Register() {
   const watchPromoCode = watch('promoCode', '');
   const watchPassword = watch('password', '');
 
-  // Funciones de utilidad
+  // Funcion para calcular edad
   const calculateAge = (birthDate) => {
     const today = new Date();
     const birth = new Date(birthDate);
@@ -27,8 +36,10 @@ export default function Register() {
     return age;
   };
 
-  const isDuocEmail = (email) => email.endsWith('@duocuc.cl'); //requisito para descuento con correo Duoc
+  // Funcion para verificar email Duoc y aplicar descuento
+  const isDuocEmail = (email) => email.endsWith('@duocuc.cl');
 
+  // Calcular beneficios en tiempo real solo para mostrar en pantalla
   const age = watchBirthDate ? calculateAge(watchBirthDate) : 0;
   const hasSeniorDiscount = age >= 50; // requisito descuento senior a partir de 50 años
   const hasPromoDiscount = watchPromoCode === 'FELICES50'; //requisito código promocional
@@ -37,29 +48,44 @@ export default function Register() {
   const onSubmit = async (data) => {
     setError('');
     setLoading(true);
+    setBenefitMessages([]);
 
     try {
-      const users = JSON.parse(localStorage.getItem('users') || '[]'); // Obtener usuarios existentes
+      let users = [];
+      try {
+        users = JSON.parse(localStorage.getItem('users') || '[]');
+        if (!Array.isArray(users)) throw new Error('Invalid users data');
+      } catch (e) {
+        users = [];
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+
+      const email = data.email.trim();
+      const name = data.name.trim();
+      const password = data.password.trim();
 
       //verifica si el usuario ya existe
-      if (users.some(u => u.email === data.email)) {
+      if (users.some(u => u.email === email)) {
         throw new Error('Este email ya está registrado');
       }
-      // Calcular descuentos
+
+      // Calcular edad a partir del valor enviado para garantizar coherencia
+      const submittedAge = calculateAge(data.birthDate);
+      // Calcular descuentos basados en los datos finales
       const discounts = {
-        senior: hasSeniorDiscount ? 50 : 0,
-        promoCode: hasPromoDiscount ? 10 : 0,
-        duocStudent: isDuocStudent,
+        senior: submittedAge >= 50 ? 50 : 0,
+        promoCode: data.promoCode?.trim() === 'FELICES50' ? 10 : 0,
+        duocStudent: isDuocEmail(email),
         birthDate: data.birthDate
       };
 
       // Crear nuevo usuario
       const newUser = {
         id: Date.now(),
-        name: data.name,
-        email: data.email,
-        password: data.password,
-        age,
+        name,
+        email,
+        password,
+        age: submittedAge,
         discounts,
         createdAt: new Date().toISOString()
       };
@@ -68,7 +94,7 @@ export default function Register() {
       users.push(newUser);
       localStorage.setItem('users', JSON.stringify(users));
 
-      // Mostrar beneficios
+      // Mostrar beneficios obtenidos
       let benefits = [];
       if (discounts.senior > 0) {
         benefits.push(`🎉 ${discounts.senior}% de descuento en todos los productos`);
@@ -81,14 +107,13 @@ export default function Register() {
       }
 
       if (benefits.length > 0) {
-        alert('¡Registro exitoso!\n\n' + benefits.join('\n'));
+        setBenefitMessages(benefits);
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000); // 3 segundos para ver los beneficios antes de redirigir
+      } else {
+        navigate('/login');
       }
-
-      // generar un login automático después del registro
-      const { password, ...userWithoutPassword } = newUser;
-      localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-
-      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -102,8 +127,7 @@ export default function Register() {
         <Card.Body>
           <h2 className="text-center mb-4">Registro de Usuario</h2>
           {error && <Alert variant="danger">{error}</Alert>}
-
-          {/* Beneficios activos */}
+          {/* se muestran beneficios en tiempo real */}
           {(hasSeniorDiscount || hasPromoDiscount || isDuocStudent) && (
             <Alert variant="success" className="benefits-alert">
               <h6 className="mb-2">🎉 Beneficios activados:</h6>
@@ -119,6 +143,16 @@ export default function Register() {
             </Alert>
           )}
 
+          {/*mensajes de beneficios aplicados */}
+          {benefitMessages.length > 0 && (
+            <Alert variant="success" onClose={() => setBenefitMessages([])} dismissible>
+              <h6 className="mb-2">🎉 Beneficios obtenidos:</h6>
+              <ul className="mb-0">
+                {benefitMessages.map((m, i) => <li key={i}>{m}</li>)}
+              </ul>
+            </Alert>
+          )}
+          {/*apartado del nombre*/}
           <Form onSubmit={handleSubmit(onSubmit)}>
             <Form.Group className="mb-3" controlId="name">
               <Form.Label>Nombre completo</Form.Label>
@@ -128,7 +162,8 @@ export default function Register() {
                   minLength: {
                     value: 3,
                     message: 'Mínimo 3 caracteres'
-                  }
+                  },
+                  setValueAs: (value) => value.trim()
                 })}
                 isInvalid={!!errors.name}
               />
@@ -136,7 +171,7 @@ export default function Register() {
                 {errors.name?.message}
               </Form.Control.Feedback>
             </Form.Group>
-
+            {/*apartado del email*/}
             <Form.Group className="mb-3" controlId="email">
               <Form.Label>Email</Form.Label>
               <Form.Control type="email" placeholder="tu@email.com o estudiante@duocuc.cl"
@@ -145,7 +180,8 @@ export default function Register() {
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                     message: 'Email inválido'
-                  }
+                  },
+                  setValueAs: (value) => value.trim()
                 })}
                 isInvalid={!!errors.email}
               />
@@ -158,7 +194,7 @@ export default function Register() {
                 {errors.email?.message}
               </Form.Control.Feedback>
             </Form.Group>
-
+            {/*apartado de la fecha de nacimiento y codigos prmocionales*/}
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="birthDate">
@@ -168,6 +204,12 @@ export default function Register() {
                     {...register('birthDate', {
                       required: 'La fecha de nacimiento es obligatoria',
                       validate: {
+                        notFuture: (value) => {
+                          const selectedDate = new Date(value);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0); // Normalizar a medianoche
+                          return selectedDate <= today || 'La fecha no puede ser futura';
+                        },
                         isAdult: (value) => {
                           const age = calculateAge(value);
                           return age >= 18 || 'Debes ser mayor de 18 años';
@@ -186,12 +228,14 @@ export default function Register() {
                   </Form.Control.Feedback>
                 </Form.Group>
               </Col>
-
+              
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="promoCode">
                   <Form.Label>Código promocional (opcional)</Form.Label>
                   <Form.Control type="text" placeholder="FELICES50"
-                    {...register('promoCode')}
+                    {...register('promoCode', {
+                      setValueAs: (value) => value?.trim() || ''
+                    })}
                   />
                   {hasPromoDiscount && (
                     <Form.Text className="text-success">
@@ -201,7 +245,7 @@ export default function Register() {
                 </Form.Group>
               </Col>
             </Row>
-
+              {/*apartado de contraseña*/}
             <Form.Group className="mb-3" controlId="password">
               <Form.Label>Contraseña</Form.Label>
               <Form.Control type="password" placeholder="••••••••"
@@ -210,7 +254,8 @@ export default function Register() {
                   minLength: {
                     value: 6,
                     message: 'Mínimo 6 caracteres'
-                  }
+                  },
+                  setValueAs: (value) => value.trim()
                 })}
                 isInvalid={!!errors.password}
               />
@@ -227,7 +272,8 @@ export default function Register() {
                 {...register('confirmPassword', {
                   required: 'Confirma tu contraseña',
                   validate: value =>
-                    value === watchPassword || 'Las contraseñas no coinciden'
+                    value === watchPassword || 'Las contraseñas no coinciden',
+                  setValueAs: (value) => value.trim()
                 })}
                 isInvalid={!!errors.confirmPassword}
               />
