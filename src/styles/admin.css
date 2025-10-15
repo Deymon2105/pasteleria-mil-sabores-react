@@ -2,15 +2,17 @@
     display:flex;
     align-items:center;
     justify-content:space-between;
-    background:#fff;
+    background: var(--white);
     padding:.75rem 1rem;
-    box-shadow:0 10px 25px rgba(0,0,0,.08)
+    box-shadow: var(--shadow);
+    font-family: var(--font-base);
 }
 
 
 .admin-header__brand{
     font-weight:900;
-    color:#8B4513
+    color: var(--accent-choc);
+    font-family: var(--font-heading);
 }
 
 
@@ -21,7 +23,7 @@
 
 
 .admin-header__link{
-    color:#5D4037;
+    color: var(--text-primary);
     text-decoration:none
 }
 
@@ -39,9 +41,9 @@
 
 
 .card{
-    background:#fff;
+    background: rgba(255,255,255,0.95);
     padding:1rem;
-    border-radius:12px
+    border-radius: var(--radius);
 }
 
 
