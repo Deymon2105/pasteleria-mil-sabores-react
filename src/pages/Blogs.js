@@ -1,10 +1,20 @@
 import React from 'react'
+import {Container, Card} from 'react-bootstrap'
 
 export default function Blogs(){
   return (
-    <div className="container my-4">
-      <h2>Blog</h2>
-      <p>Artículos y novedades.</p>
-    </div>
+    <Container className="blog-container">
+      <h1>Blogs y Comunidad</h1>
+      <Card className="blog-card">
+        <Card.Title className="blog-title">Receta clasica: Torta de manjar</Card.Title>
+        <Card.Text className="blog-meta">Por estudiantes de gastronomia DUOC</Card.Text>
+        <Card.Text className="blog-content">Consejos, recetas y la historia de nuestras preparaciones.</Card.Text>
+      </Card>
+      <Card className="blog-card">
+        <Card.Title className="blog-title">Logros de Pasteleria Mil Sabores</Card.Title>
+        <Card.Text className="blog-meta">Record Guinness 1995</Card.Text>
+        <Card.Text className="blog-content">Creacion de la torta mas grande del mundo.</Card.Text>
+      </Card>
+    </Container>
   )
 }
