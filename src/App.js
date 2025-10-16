@@ -17,6 +17,7 @@ import OrdersAdmin from './admin/Orders'
 import ProductsAdmin from './admin/Products'
 import UsersAdmin from './admin/Users'
 import Register from './pages/Register';
+import Compra from './pages/Compra';
 
 function App() {
   return (
@@ -32,6 +33,9 @@ function App() {
           <Route path="/login" element={<Login/>} />
           <Route path="/register" element={<Register/>}/>
           <Route path="/cart" element={<Cart/>} />
+          <Route path="/compra" element={<Compra/>} />
+          
+          {/*rutas de admin */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="orders" element={<OrdersAdmin />} />
