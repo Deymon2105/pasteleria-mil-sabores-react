@@ -5,16 +5,49 @@ const CartContext = createContext()
 
 
 export function CartProvider({ children }){
+  // Función para obtener la clave del carrito del usuario actual
+  const getCartKey = () => {
+    try {
+      const currentUser = localStorage.getItem('currentUser');
+      if (currentUser) {
+        const user = JSON.parse(currentUser);
+        return `cart_${user.id || user.email}`; // Usar ID o email como identificador único
+      }
+      return 'cart_guest'; // Carrito para usuarios no autenticados
+    } catch {
+      return 'cart_guest';
+    }
+  };
+
   const [cart, setCart] = useState(() => {
     try{
-      const raw = localStorage.getItem('cart')
+      const cartKey = getCartKey();
+      const raw = localStorage.getItem(cartKey);
       return raw ? JSON.parse(raw) : []
     }catch{ return [] }
   })
 
+  // Actualizar carrito cuando cambia la sesión del usuario
+  useEffect(() => {
+    const handleUserSessionChange = () => {
+      try {
+        const cartKey = getCartKey();
+        const raw = localStorage.getItem(cartKey);
+        setCart(raw ? JSON.parse(raw) : []);
+      } catch {
+        setCart([]);
+      }
+    };
+
+    window.addEventListener('userSessionChange', handleUserSessionChange);
+    return () => window.removeEventListener('userSessionChange', handleUserSessionChange);
+  }, []);
 
   useEffect(()=>{
-    try{ localStorage.setItem('cart', JSON.stringify(cart)) }catch{}
+    try{ 
+      const cartKey = getCartKey();
+      localStorage.setItem(cartKey, JSON.stringify(cart));
+    }catch{}
   },[cart])
 
 

@@ -45,18 +45,14 @@ export default function Compra() {
                 console.error('Error al cargar usuario:', error);
             }
         }
-        // Guardar carrito inicial
-        setCarritoInicial([...cart]);
-    }, []);
-
-    // Redirigir si el carrito está vacío al cargar la página por primera vez
-    useEffect(() => {
-        if (carritoInicial.length === 0 && cart.length === 0) {
+        if (carritoInicial.length === 0 && cart.length > 0) {
+            setCarritoInicial([...cart]);
+        }
+        if (cart.length === 0 && carritoInicial.length === 0 && !mostrarAlertaCompraExitosa) {
             navegar('/cart');
         }
-    }, [carritoInicial, navegar]);
+    }, [cart, navegar, carritoInicial.length, mostrarAlertaCompraExitosa]);
 
-    // Calcular totales - usar carritoInicial si el carrito fue limpiado
     const carritoParaCalcular = cart.length > 0 ? cart : carritoInicial;
     const subtotal = carritoParaCalcular.reduce((s, p) => s + (p.price * (p.qty || 1)), 0);
     
@@ -81,7 +77,15 @@ export default function Compra() {
         e.preventDefault();
         setCargando(true);
         
-        // Validar campos de pago
+        //validar campos de dirección
+        if (!datosFormulario.nombre || !datosFormulario.correo || 
+            !datosFormulario.calle || !datosFormulario.region || !datosFormulario.comuna) {
+            alert('Por favor completa todos los campos de envío obligatorios');
+            setCargando(false);
+            return;
+        }
+        
+        //validar campos de pago
         if (!datosFormulario.numeroTarjeta || !datosFormulario.nombreTarjeta || 
             !datosFormulario.fechaVencimiento || !datosFormulario.cvv) {
             setMostrarAlertaCompraAnulada(true);
@@ -90,9 +94,38 @@ export default function Compra() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
-
-        // Simular validación de pago (aleatorio para demostración)
-        // En producción, aquí iría la validación real con una pasarela de pago
+        
+        //validar formato de número de tarjeta
+        const numeroLimpio = datosFormulario.numeroTarjeta.replace(/\s/g, '');
+        if (numeroLimpio.length !== 16) {
+            alert('El número de tarjeta debe tener 16 dígitos');
+            setCargando(false);
+            return;
+        }
+        
+        //validar formato de fecha de vencimiento
+        if (!/^\d{2}\/\d{2}$/.test(datosFormulario.fechaVencimiento)) {
+            alert('La fecha de vencimiento debe tener formato MM/AA');
+            setCargando(false);
+            return;
+        }
+        
+        //validar que la tarjeta no esté vencida
+        const [mes, anio] = datosFormulario.fechaVencimiento.split('/');
+        const fechaVencimiento = new Date(2000 + parseInt(anio), parseInt(mes) - 1);
+        const fechaActual = new Date();
+        if (fechaVencimiento < fechaActual) {
+            alert('La tarjeta está vencida');
+            setCargando(false);
+            return;
+        }
+        
+        //validar CVV
+        if (datosFormulario.cvv.length < 3 || datosFormulario.cvv.length > 4) {
+            alert('El CVV debe tener 3 o 4 dígitos');
+            setCargando(false);
+            return;
+        }
         const pagoExitoso = Math.random() > 0.2; // 80% de éxito
 
         if (pagoExitoso) {
@@ -137,17 +170,12 @@ export default function Compra() {
                 compras.push(compra);
                 localStorage.setItem('compras', JSON.stringify(compras));
 
-                // Limpiar carrito
                 clearCart();
-
-                // Mostrar alerta de éxito
                 setMostrarAlertaCompraExitosa(true);
                 setCargando(false);
                 
-                // Scroll hacia arriba para ver la alerta
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-                
-                // Resetear formulario (mantener nombre y correo si hay usuario)
+                // Resetear formulario
                 setDatosFormulario({
                     nombre: usuarioActual?.name || '', 
                     correo: usuarioActual?.email || '', 
@@ -161,8 +189,6 @@ export default function Compra() {
                     fechaVencimiento: '',
                     cvv: ''
                 });
-
-                // Redirigir después de 4 segundos
                 setTimeout(() => {
                     navegar('/');
                 }, 4000);
@@ -182,16 +208,50 @@ export default function Compra() {
     };
 
     const manejarCambio = (e) => {
+        const { name, value } = e.target;
+        
+        //agregar espacios cada 4 dígitos)
+        if (name === 'numeroTarjeta') {
+            const onlyNumbers = value.replace(/\D/g, '');
+            const formatted = onlyNumbers.replace(/(\d{4})(?=\d)/g, '$1 ').slice(0, 19); // Máximo 16 dígitos + 3 espacios
+            setDatosFormulario({
+                ...datosFormulario,
+                [name]: formatted
+            });
+            return;
+        }
+        
+        if (name === 'fechaVencimiento') {
+            const cleaned = value.replace(/\D/g, '');
+            let formatted = cleaned;
+            if (cleaned.length >= 2) {
+                formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}`;
+            }
+            setDatosFormulario({
+                ...datosFormulario,
+                [name]: formatted
+            });
+            return;
+        }
+        
+        if (name === 'cvv') {
+            const onlyNumbers = value.replace(/\D/g, '').slice(0, 4);
+            setDatosFormulario({
+                ...datosFormulario,
+                [name]: onlyNumbers
+            });
+            return;
+        }
+
         setDatosFormulario({
             ...datosFormulario,
-            [e.target.name]: e.target.value
+            [name]: value
         });
     };
 
     return (
         <Container className="compra-container my-4">
             <h2 className="text-center mb-4">Finalizar Compra</h2>
-            
             {mostrarAlertaCompraExitosa && (
                 <Alert variant="success" className="mb-4">
                     <Alert.Heading>✅ ¡Compra exitosa!</Alert.Heading>
@@ -207,7 +267,6 @@ export default function Compra() {
                     <p className="mb-0">No se ha podido concretar la compra. Verifica los datos de pago e inténtalo nuevamente.</p>
                 </Alert>
             )}
-
             <div className="row">
                 {/* Formulario de compra */}
                 <div className="col-md-7">

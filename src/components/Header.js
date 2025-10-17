@@ -24,9 +24,7 @@ export default function Header(){
     }
 
     checkUser()
-    // Escuchar cambios en localStorage desde otras pestañas/componentes
     window.addEventListener('storage', checkUser)
-    // Escuchar evento personalizado para cambios en la misma pestaña
     window.addEventListener('userSessionChange', checkUser)
 
     return () => {
@@ -39,6 +37,7 @@ export default function Header(){
   const handleLogout = () => {
     localStorage.removeItem('currentUser')
     setCurrentUser(null)
+    window.dispatchEvent(new Event('userSessionChange')) // Disparar evento para actualizar el carrito
     navigate('/login')
   }
 
