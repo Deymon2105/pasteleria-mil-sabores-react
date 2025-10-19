@@ -1,43 +1,16 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Navbar, Nav, Container, Badge, Button, Dropdown } from 'react-bootstrap'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 
 export default function Header(){
   const { totalCount } = useCart()
-  const [currentUser, setCurrentUser] = useState(null)
+  const { currentUser, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
 
-  // Verificar si hay sesión activa
-  useEffect(() => {
-    const checkUser = () => {
-      const user = localStorage.getItem('currentUser')
-      if (user) {
-        try {
-          setCurrentUser(JSON.parse(user))
-        } catch (e) {
-          setCurrentUser(null)
-        }
-      } else {
-        setCurrentUser(null)
-      }
-    }
-
-    checkUser()
-    window.addEventListener('storage', checkUser)
-    window.addEventListener('userSessionChange', checkUser)
-
-    return () => {
-      window.removeEventListener('storage', checkUser)
-      window.removeEventListener('userSessionChange', checkUser)
-    }
-  }, [])
-
-  // Función para cerrar sesión
   const handleLogout = () => {
-    localStorage.removeItem('currentUser')
-    setCurrentUser(null)
-    window.dispatchEvent(new Event('userSessionChange')) // Disparar evento para actualizar el carrito
+    logout()
     navigate('/login')
   }
 
@@ -54,17 +27,31 @@ export default function Header(){
               <Nav.Link as={Link} to="/blogs">Blog</Nav.Link>
               <Nav.Link as={Link} to="/about">Historia</Nav.Link>
               <Nav.Link as={Link} to="/contacto">Contacto</Nav.Link>
+              {isAdmin() && (
+                <Nav.Link as={Link} to="/admin" className="text-primary fw-bold">
+                  Panel Admin
+                </Nav.Link>
+              )}
             </Nav>
             <Nav>
               {currentUser ? (
                 <Dropdown align="end" className='user-dropdown'>
                   <Dropdown.Toggle variant="outline-secondary" id="user-dropdown" size="sm">
-                    👤 {currentUser.name || currentUser.email}
+                    {currentUser.name || currentUser.email}
+                    {isAdmin() && <Badge bg="danger" className="ms-1">Admin</Badge>}
                   </Dropdown.Toggle>
                   <Dropdown.Menu>
                     <Dropdown.Item disabled>
                       <small className="text-muted">{currentUser.email}</small>
                     </Dropdown.Item>
+                    {isAdmin() && (
+                      <>
+                        <Dropdown.Divider />
+                        <Dropdown.Item as={Link} to="/admin">
+                          Panel Admin
+                        </Dropdown.Item>
+                      </>
+                    )}
                     <Dropdown.Divider />
                     <Dropdown.Item onClick={handleLogout}>
                       Cerrar sesión

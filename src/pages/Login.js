@@ -2,49 +2,48 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { Container, Form, Button, Alert, Card } from 'react-bootstrap';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, currentUser, isAdmin } = useAuth();
 
   useEffect(() => { 
-    const currentUser = localStorage.getItem('currentUser');
     if (currentUser) {
-      navigate('/'); //redirigir si ya hay sesión activa
+      // Si ya hay sesión, redirigir según el rol
+      if (isAdmin()) {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     }
-  }, [navigate]);
+  }, [currentUser, isAdmin, navigate]);
 
-  const onSubmit = async (data) => { //se ejecuta un función asincrona al enviar el formulario
+  const onSubmit = async (data) => {
     setError('');
     setLoading(true);
 
     try {
-      let users = [];
-      try {
-        users = JSON.parse(localStorage.getItem('users') || '[]');
-        if (!Array.isArray(users)) throw new Error('Invalid users data');
-      } catch (e) {
-        // si users está corrupto, resetear a array vacío
-        users = [];
-        localStorage.setItem('users', JSON.stringify(users));
-      }
-
-      const email = data.email.trim(); // trim por si quedan espacios alrededor
+      const email = data.email.trim();
       const password = data.password.trim();
 
-      const user = users.find(u => u.email === email && u.password === password);
+      const result = login(email, password);
 
-      if (!user) {
-        throw new Error('Email o contraseña incorrectos');
+      if (!result.success) {
+        throw new Error(result.error || 'Email o contraseña incorrectos');
       }
 
-      const { password: _, ...userWithoutPassword } = user;
-      localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword)); //guardar sesión
+      window.dispatchEvent(new Event('userSessionChange'));
       
-      window.dispatchEvent(new Event('userSessionChange')); // disparar evento para que el Header se actualice
-      navigate('/'); //enviar a la pantalla del home
+      // Redirigir según el rol del usuario
+      if (result.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setError(err.message);
     } finally {

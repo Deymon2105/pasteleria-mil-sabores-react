@@ -23,18 +23,18 @@ export default function Compra() {
         cvv: ''
     });
     const [usuarioActual, setUsuarioActual] = useState(null);
-    const [descuentosUsuario, setDescuentosUsuario] = useState(null);
+    const [userBenefits, setUserBenefits] = useState([]);
     const [cargando, setCargando] = useState(false);
     const [carritoInicial, setCarritoInicial] = useState([]);
 
-    //funcion para obtener usuario y descuentos al cargar la página
+    //funcion para obtener usuario y beneficios al cargar la página
     useEffect(() => {
         const usuarioStr = localStorage.getItem('currentUser');
         if (usuarioStr) {
             try {
                 const usuario = JSON.parse(usuarioStr);
                 setUsuarioActual(usuario);
-                setDescuentosUsuario(usuario.discounts);
+                setUserBenefits(usuario.benefits || []);
                 // Pre-llenar nombre y correo
                 setDatosFormulario(prev => ({
                     ...prev,
@@ -56,20 +56,21 @@ export default function Compra() {
     const carritoParaCalcular = cart.length > 0 ? cart : carritoInicial;
     const subtotal = carritoParaCalcular.reduce((s, p) => s + (p.price * (p.qty || 1)), 0);
     
+    // Calcular descuentos basados en benefits array
     let descuentoTotal = 0;
     let detallesDescuento = [];
     
-    if (descuentosUsuario) {
-        if (descuentosUsuario.senior > 0) {
-            descuentoTotal += descuentosUsuario.senior;
-            detallesDescuento.push({ etiqueta: 'Descuento senior', valor: descuentosUsuario.senior });
-        }
-        if (descuentosUsuario.promoCode > 0) {
-            descuentoTotal += descuentosUsuario.promoCode;
-            detallesDescuento.push({ etiqueta: 'Código FELICES50', valor: descuentosUsuario.promoCode });
-        }
+    if (userBenefits.includes('>50')) {
+        descuentoTotal += 50;
+        detallesDescuento.push({ etiqueta: 'Descuento mayores de 50 años', valor: 50 });
     }
     
+    if (userBenefits.includes('FELICES50')) {
+        descuentoTotal += 10;
+        detallesDescuento.push({ etiqueta: 'Código FELICES50', valor: 10 });
+    }
+    
+    const hasDuocBenefit = userBenefits.includes('DUOC');
     const montoDescuento = subtotal * (descuentoTotal / 100);
     const total = subtotal - montoDescuento;
 
@@ -490,9 +491,9 @@ export default function Compra() {
                                 </>
                             )}
 
-                            {descuentosUsuario?.duocStudent && (
+                            {hasDuocBenefit && (
                                 <Alert variant="info" className="mt-2 mb-2 py-2">
-                                    <small>🎂 <strong>Beneficio activo:</strong> Torta gratis en tu cumpleaños</small>
+                                    <small><strong>Beneficio DUOC:</strong> Torta gratis en tu cumpleaños</small>
                                 </Alert>
                             )}
 
