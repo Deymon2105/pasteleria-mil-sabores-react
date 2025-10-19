@@ -11,6 +11,8 @@ import Contacto from './pages/Contacto'
 import Login from './pages/Login'
 import Cart from './pages/Cart'
 import { CartProvider } from './context/CartContext'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './admin/AdminLayout'
 import Dashboard from './admin/Dashboard'
 import OrdersAdmin from './admin/Orders'
@@ -21,31 +23,37 @@ import Compra from './pages/Compra';
 
 function App() {
   return (
-    <CartProvider>
-      <Header />
-      <main>
-        <Routes>
-          <Route path="/" element={<Home/>} />
-          <Route path="/catalogo" element={<Catalogo/>} />
-          <Route path="/blogs" element={<Blogs/>} />
-          <Route path="/about" element={<About/>} />
-          <Route path="/contacto" element={<Contacto/>} />
-          <Route path="/login" element={<Login/>} />
-          <Route path="/register" element={<Register/>}/>
-          <Route path="/cart" element={<Cart/>} />
-          <Route path="/compra" element={<Compra/>} />
-          
-          {/*rutas de admin */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="orders" element={<OrdersAdmin />} />
-            <Route path="products" element={<ProductsAdmin />} />
-            <Route path="users" element={<UsersAdmin />} />
-          </Route>
-        </Routes>
-      </main>
-      <Footer />
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <Header />
+        <main>
+          <Routes>
+            <Route path="/" element={<Home/>} />
+            <Route path="/catalogo" element={<Catalogo/>} />
+            <Route path="/blogs" element={<Blogs/>} />
+            <Route path="/about" element={<About/>} />
+            <Route path="/contacto" element={<Contacto/>} />
+            <Route path="/login" element={<Login/>} />
+            <Route path="/register" element={<Register/>}/>
+            <Route path="/cart" element={<Cart/>} />
+            <Route path="/compra" element={<Compra/>} />
+            
+            {/*rutas de admin protegidas */}
+            <Route path="/admin" element={
+              <ProtectedRoute requireAdmin={true}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<Dashboard />} />
+              <Route path="orders" element={<OrdersAdmin />} />
+              <Route path="products" element={<ProductsAdmin />} />
+              <Route path="users" element={<UsersAdmin />} />
+            </Route>
+          </Routes>
+        </main>
+        <Footer />
+      </CartProvider>
+    </AuthProvider>
   );
 }
 

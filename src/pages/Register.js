@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { Container, Form, Button, Alert, Card, Badge, Row, Col } from 'react-bootstrap';
+import { useAuth } from '../context/AuthContext';
 
 export default function Register() {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
@@ -9,14 +10,14 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [benefitMessages, setBenefitMessages] = useState([]);
   const navigate = useNavigate();
+  const { currentUser, allUsers, register: registerUser } = useAuth();
 
   //redirigir si ya hay sesión activa
   useEffect(() => {
-    const currentUser = localStorage.getItem('currentUser');
     if (currentUser) {
       navigate('/');
     }
-  }, [navigate]);
+  }, [currentUser, navigate]);
 
   //función watch para validaciones en tiempo real
   const watchEmail = watch('email', '');
@@ -51,68 +52,71 @@ export default function Register() {
     setBenefitMessages([]);
 
     try {
-      let users = [];
-      try {
-        users = JSON.parse(localStorage.getItem('users') || '[]');
-        if (!Array.isArray(users)) throw new Error('Invalid users data');
-      } catch (e) {
-        users = [];
-        localStorage.setItem('users', JSON.stringify(users));
-      }
-
       const email = data.email.trim();
       const name = data.name.trim();
       const password = data.password.trim();
 
-      //verifica si el usuario ya existe
-      if (users.some(u => u.email === email)) {
+      // Verificar si el usuario ya existe
+      if (allUsers.some(u => u.email === email)) {
         throw new Error('Este email ya está registrado');
       }
 
-      // Calcular edad a partir del valor enviado para garantizar coherencia
+      // Calcular edad
       const submittedAge = calculateAge(data.birthDate);
-      // Calcular descuentos basados en los datos finales
-      const discounts = {
-        senior: submittedAge >= 50 ? 50 : 0,
-        promoCode: data.promoCode?.trim() === 'FELICES50' ? 10 : 0,
-        duocStudent: isDuocEmail(email),
-        birthDate: data.birthDate
-      };
+      
+      // Calcular beneficios
+      const benefits = [];
+      
+      if (submittedAge >= 50) {
+        benefits.push('>50');
+      }
+      
+      if (data.promoCode?.trim() === 'FELICES50') {
+        benefits.push('FELICES50');
+      }
+      
+      if (isDuocEmail(email)) {
+        benefits.push('DUOC');
+      }
 
-      // Crear nuevo usuario
+      // Crear nuevo usuario con el formato correcto del sistema
       const newUser = {
-        id: Date.now(),
         name,
         email,
-        password,
+        password, // Guardamos la contraseña
+        role: 'user', // Los nuevos usuarios son usuarios normales
+        birthdate: data.birthDate,
+        benefits: benefits,
         age: submittedAge,
-        discounts,
         createdAt: new Date().toISOString()
       };
 
-      //guardar usuario en el localStorage
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
+      // Registrar usuario usando AuthContext
+      const result = registerUser(newUser);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Error al registrar usuario');
+      }
 
       // Mostrar beneficios obtenidos
-      let benefits = [];
-      if (discounts.senior > 0) {
-        benefits.push(`🎉 ${discounts.senior}% de descuento en todos los productos`);
+      let benefitMsgs = [];
+      if (submittedAge >= 50) {
+        benefitMsgs.push('🎉 50% de descuento en todos los productos (mayores de 50)');
       }
-      if (discounts.promoCode > 0) {
-        benefits.push(`🎁 ${discounts.promoCode}% de descuento adicional de por vida`);
+      if (data.promoCode?.trim() === 'FELICES50') {
+        benefitMsgs.push('🎁 10% de descuento adicional con código FELICES50');
       }
-      if (discounts.duocStudent) {
-        benefits.push('🎂 Torta gratis en tu cumpleaños');
+      if (isDuocEmail(email)) {
+        benefitMsgs.push('🎂 Torta gratis en tu cumpleaños (estudiante DUOC)');
       }
 
-      if (benefits.length > 0) {
-        setBenefitMessages(benefits);
+      if (benefitMsgs.length > 0) {
+        setBenefitMessages(benefitMsgs);
         setTimeout(() => {
-          navigate('/login');
+          navigate('/');
         }, 3000); // 3 segundos para ver los beneficios antes de redirigir
       } else {
-        navigate('/login');
+        navigate('/');
       }
     } catch (err) {
       setError(err.message);
@@ -245,7 +249,7 @@ export default function Register() {
                 </Form.Group>
               </Col>
             </Row>
-              {/*apartado de contraseña*/}
+            {/*apartado de contraseña*/}
             <Form.Group className="mb-3" controlId="password">
               <Form.Label>Contraseña</Form.Label>
               <Form.Control type="password" placeholder="••••••••"

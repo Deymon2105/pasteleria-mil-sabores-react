@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Jasmine Tests - Pastelería Mil Sabores</title>
+  
+  <!-- Jasmine CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/jasmine.min.css">
+  
+  <!-- Jasmine Core -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/jasmine.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/jasmine-html.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/boot0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jasmine/5.1.1/boot1.min.js"></script>
+  
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .jasmine_html-reporter {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+    
+    .header h1 {
+      font-size: 2.5em;
+      margin: 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .header p {
+      font-size: 1.2em;
+      margin: 10px 0;
+    }
+    
+    .info-box {
+      background: rgba(255,255,255,0.95);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .info-box h3 {
+      margin-top: 0;
+      color: #667eea;
+    }
+    
+    .file-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .file-item {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .file-item strong {
+      color: #764ba2;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="header">
+    <h1>🍰 Tests Unitarios - Pastelería Mil Sabores</h1>
+    <p>Framework: Jasmine | Total: 121 Pruebas</p>
+  </div>
+  
+  <div class="info-box">
+    <h3>📂 Archivos de Prueba</h3>
+    <div class="file-list">
+      <div class="file-item">
+        <strong>cart.spec.js</strong><br>
+        19 tests
+      </div>
+      <div class="file-item">
+        <strong>compra.spec.js</strong><br>
+        18 tests
+      </div>
+      <div class="file-item">
+        <strong>login.spec.js</strong><br>
+        23 tests
+      </div>
+      <div class="file-item">
+        <strong>register.spec.js</strong><br>
+        32 tests
+      </div>
+      <div class="file-item">
+        <strong>catalogo.spec.js</strong><br>
+        29 tests
+      </div>
+    </div>
+  </div>
+  
+  <!-- Archivos de Test -->
+  <script src="test/demo.spec.js"></script>
+  <script src="test/cart.spec.js"></script>
+  <script src="test/compra.spec.js"></script>
+  <script src="test/login.spec.js"></script>
+  <script src="test/register.spec.js"></script>
+  <script src="test/catalogo.spec.js"></script>
+  
+</body>
+</html>
