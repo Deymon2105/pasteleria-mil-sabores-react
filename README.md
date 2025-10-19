@@ -1,8 +1,49 @@
-# Getting Started with Create React App
+# 🍰 Pastelería Mil Sabores - React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Sistema de e-commerce para pastelería con panel de administración y gestión de usuarios.
 
-## Available Scripts
+## 🎯 Acceso Rápido para Demo
+
+### 👤 **Panel de Administración**
+
+**Emails de Admin** (sin contraseña necesaria):
+- `ana@duocuc.cl`
+- `admin@example.com`
+
+📖 **[Ver guía completa de acceso →](./ACCESO_DEMO.md)**
+
+---
+
+## 🚀 Inicio Rápido
+
+```bash
+# Instalar dependencias
+npm install
+
+# Iniciar aplicación
+npm start
+```
+
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+
+---
+
+## 🧪 Testing
+
+Ver tests unitarios con Jasmine:
+
+```bash
+npm start
+# Luego abre: http://localhost:3000/test-runner.html
+```
+
+**121 tests** cubriendo: Props, State y Events
+
+📖 **[Documentación de Testing →](./TESTING_GUIDE.md)**
+
+---
+
+## 📋 Available Scripts
 
 In the project directory, you can run:
 
