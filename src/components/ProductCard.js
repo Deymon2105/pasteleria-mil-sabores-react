@@ -31,8 +31,14 @@ export default function ProductCard({ product, onVerDetalles }) {
           <Button onClick={() => addToCart(product)} variant="primary">
             Agregar al carrito
           </Button>
-          {/* 👇 este botón ahora usa la prop que viene desde Catalogo */}
-          <Button className="btn-detalles" variant="secondary" onClick={() => onVerDetalles(product)}>
+          {/* 👇 este botón usa la prop que puede venir desde Catalogo; protegemos su uso */}
+          <Button
+            className="btn-detalles"
+            variant="secondary"
+            onClick={() => {
+              if (typeof onVerDetalles === 'function') onVerDetalles(product)
+            }}
+          >
             Ver detalles
           </Button>
         </div>
@@ -51,4 +57,8 @@ ProductCard.propTypes = {
     category: PropTypes.string
   }).isRequired,
   onVerDetalles: PropTypes.func 
+}
+
+ProductCard.defaultProps = {
+  onVerDetalles: undefined
 }
