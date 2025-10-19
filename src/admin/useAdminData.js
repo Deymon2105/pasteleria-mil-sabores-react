@@ -9,6 +9,7 @@ export default function useAdminData(){
     }catch{return seedOrders}
   })
   
+  // eslint-disable-next-line no-unused-vars
   const [users, setUsers] = useState(()=>{
     try{ 
       const ls = localStorage.getItem('users');
