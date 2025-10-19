@@ -2,11 +2,23 @@ import React, { useState } from 'react'
 import { Container, Row, Col, Form, Alert } from 'react-bootstrap'
 import products from '../data/products'
 import ProductCard from '../components/ProductCard'
+import ModalProducto from '../components/ModalProducto'
 
-export default function Catalogo(){
+export default function Catalogo() {
 
   const [selectedCategory, setSelectedCategory] = useState('Todos') //estado categorias seleccionadas
   const [searchTerm, setSearchTerm] = useState('') //estado texto de busqueda
+
+  // --- NUEVOS ESTADOS PARA EL MODAL ---
+  const [productoSeleccionado, setProductoSeleccionado] = useState(null)
+
+  const handleVerDetalles = (producto) => {
+    setProductoSeleccionado(producto)
+  }
+
+  const cerrarModal = () => {
+    setProductoSeleccionado(null)
+  }
 
   const categories = ['Todos', 'Tortas Cuadradas', 'Tortas Circulares', 
                       'Postres Individuales', 'Productos Sin Azúcar', 'Pastelería Tradicional', 
@@ -15,55 +27,56 @@ export default function Catalogo(){
   //Funcion para el filtro
   const filteredProducts = products.filter(product => {
     const matchCategory = selectedCategory === 'Todos' || product.category === selectedCategory //filtro categoría
-    const matchSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || product.desc.toLowerCase().includes(searchTerm.toLowerCase()) //filtro busqueda
-
+    const matchSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        product.desc.toLowerCase().includes(searchTerm.toLowerCase()) //filtro texto
     return matchCategory && matchSearch
   })
 
   return (
-    <Container className="my-4">
-      <h2 className="mb-4">Catálogo</h2>
+    <Container className="my-5">
+      <h1 className="text-center mb-4">Catálogo de Productos</h1>
 
-      <Row className="mb-4 g-3">
+      {/* Buscador y categorías */}
+      <Row className="mb-4">
         <Col md={6}>
-          <Form.Label htmlFor="categoryFilter" className="fw-bold">
-            Filtrar por Categoría:
-          </Form.Label>
-          <Form.Select id="categoryFilter" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-            {categories.map((category, index) => (
-              <option key={index} value={category}>
+          <Form.Control
+            type="text"
+            placeholder="Buscar productos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </Col>
+        <Col md={6}>
+          <Form.Select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            {categories.map((category) => (
+              <option key={category} value={category}>
                 {category}
               </option>
             ))}
           </Form.Select>
         </Col>
-
-        <Col md={6}>
-          <Form.Label htmlFor="searchInput" className="fw-bold">
-            Buscar Productos:
-          </Form.Label>
-          <Form.Control
-            id="searchInput"
-            type="text"
-            placeholder="Buscar por nombre o descripción..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </Col>
       </Row>
 
-      <p className="text-muted mb-3">
-        Mostrando {filteredProducts.length} de {products.length} productos
-      </p>
-      <div className="d-flex flex-wrap">
+      {/* Productos filtrados */}
+      <Row>
         {filteredProducts.length > 0 ? (
-          filteredProducts.map(p => <ProductCard key={p.id} product={p} />)
+          filteredProducts.map((product) => (
+            <Col key={product.id} md={4} sm={6} className="mb-4">
+              <ProductCard product={product} onVerDetalles={handleVerDetalles} />
+            </Col>
+          ))
         ) : (
-          <Alert variant="info" className="w-100">
-            No se encontraron productos con esa descripción.
-          </Alert>
+          <Alert variant="info">No se encontraron productos.</Alert>
         )}
-      </div>
+      </Row>
+
+      {/* --- MODAL DE DETALLES --- */}
+      {productoSeleccionado && (
+        <ModalProducto producto={productoSeleccionado} onClose={cerrarModal} />
+      )}
     </Container>
   )
 }
