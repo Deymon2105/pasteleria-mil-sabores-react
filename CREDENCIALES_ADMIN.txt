@@ -1,0 +1,81 @@
+╔════════════════════════════════════════════════════════════╗
+║  🍰 PASTELERÍA MIL SABORES - ACCESO RÁPIDO ADMIN          ║
+╚════════════════════════════════════════════════════════════╝
+
+🔑 CREDENCIALES PARA PANEL DE ADMINISTRACIÓN
+═══════════════════════════════════════════════════════════
+
+📧 Email Admin 1: ana@duocuc.cl
+📧 Email Admin 2: admin@example.com
+
+🔒 Contraseña: NO NECESARIA (dejala vacía o escribe cualquier cosa)
+
+
+📝 PASOS PARA ACCEDER:
+═══════════════════════════════════════════════════════════
+
+1. Abre la aplicación: http://localhost:3000
+
+2. Ve a Login: http://localhost:3000/login
+
+3. Ingresa uno de los emails admin:
+   → ana@duocuc.cl
+   → admin@example.com
+
+4. La contraseña es opcional (puedes dejarla vacía)
+
+5. Click en "Iniciar Sesión"
+
+6. ¡Listo! Ya estás en el Panel Admin 🎉
+
+
+🎯 USUARIOS DE PRUEBA DISPONIBLES:
+═══════════════════════════════════════════════════════════
+
+ADMINISTRADORES:
+├─ ana@duocuc.cl         (Admin con beneficios DUOC + >50)
+└─ admin@example.com     (Admin con código FELICES50)
+
+USUARIOS NORMALES:
+├─ luis@example.com      (Sin beneficios)
+├─ maria@duocuc.cl       (Beneficio DUOC)
+└─ carlos@example.com    (Beneficio >50 años)
+
+
+💡 TIPS IMPORTANTES:
+═══════════════════════════════════════════════════════════
+
+✅ Los datos se guardan en localStorage (navegador)
+✅ Si no funciona, limpia el localStorage:
+   F12 → Application → Local Storage → Clear
+✅ Todos pueden crear nuevos usuarios con Register
+✅ Solo los emails de arriba tienen acceso admin
+
+
+🐛 ¿PROBLEMAS?
+═══════════════════════════════════════════════════════════
+
+❌ No puedo acceder al admin
+   → Usa ana@duocuc.cl o admin@example.com
+   → La contraseña es opcional
+
+❌ Ya inicié sesión como usuario normal
+   → Click en tu nombre arriba a la derecha
+   → Selecciona "Cerrar Sesión"
+   → Vuelve a login con email admin
+
+❌ El servidor no arranca
+   → npm install
+   → npm start
+
+
+📞 CONTACTO
+═══════════════════════════════════════════════════════════
+
+Repositorio: https://github.com/Deymon2105/pasteleria-mil-sabores-react
+Documentación completa: Ver ACCESO_DEMO.md
+
+
+═══════════════════════════════════════════════════════════
+🎉 ¡Disfruta explorando el Panel de Admin!
+═══════════════════════════════════════════════════════════
