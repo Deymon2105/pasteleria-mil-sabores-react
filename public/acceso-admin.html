@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍰 Acceso Panel Admin - Pastelería Mil Sabores</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #764ba2;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .emoji {
+            font-size: 3em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .credentials {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border: 2px dashed #2196f3;
+        }
+        
+        .email {
+            font-size: 1.3em;
+            color: #1976d2;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .steps {
+            counter-reset: step-counter;
+            list-style: none;
+        }
+        
+        .steps li {
+            counter-increment: step-counter;
+            margin: 15px 0;
+            padding-left: 50px;
+            position: relative;
+            line-height: 1.6;
+        }
+        
+        .steps li:before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #667eea;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        
+        .url {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            color: #2e7d32;
+            font-size: 1.1em;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+        
+        .button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            color: #155724;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">🍰</div>
+        <h1>Panel de Administración</h1>
+        <h2 style="text-align: center; color: #666; margin-bottom: 30px;">Acceso Rápido para Demo</h2>
+        
+        <div class="success">
+            <strong>✅ ¡Acceso Simplificado!</strong><br>
+            Ya no necesitas contraseña para la demo. Solo ingresa el email.
+        </div>
+        
+        <div class="section">
+            <h2>🔑 Credenciales de Administrador</h2>
+            <div class="credentials">
+                <p>📧 Email Admin 1:</p>
+                <div class="email">ana@duocuc.cl</div>
+            </div>
+            <div class="credentials">
+                <p>📧 Email Admin 2:</p>
+                <div class="email">admin@example.com</div>
+            </div>
+            <div class="highlight">
+                <strong>💡 Importante:</strong> La contraseña es <strong>OPCIONAL</strong>. 
+                Puedes dejarla vacía o escribir cualquier cosa.
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📝 Pasos para Acceder</h2>
+            <ol class="steps">
+                <li>Abre la aplicación en <span class="url">http://localhost:3000</span></li>
+                <li>Ve a la página de Login</li>
+                <li>Ingresa uno de los emails admin</li>
+                <li>Deja la contraseña vacía (o escribe cualquier cosa)</li>
+                <li>Click en "Iniciar Sesión"</li>
+                <li>¡Listo! Ya estás en el Panel Admin 🎉</li>
+            </ol>
+        </div>
+        
+        <div class="section">
+            <h2>👥 Todos los Usuarios de Demo</h2>
+            <table>
+                <tr>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Beneficios</th>
+                </tr>
+                <tr style="background: #e3f2fd;">
+                    <td><code>ana@duocuc.cl</code></td>
+                    <td><strong>Admin</strong></td>
+                    <td>DUOC, &gt;50</td>
+                </tr>
+                <tr style="background: #e3f2fd;">
+                    <td><code>admin@example.com</code></td>
+                    <td><strong>Admin</strong></td>
+                    <td>FELICES50</td>
+                </tr>
+                <tr>
+                    <td><code>luis@example.com</code></td>
+                    <td>User</td>
+                    <td>Ninguno</td>
+                </tr>
+                <tr>
+                    <td><code>maria@duocuc.cl</code></td>
+                    <td>User</td>
+                    <td>DUOC</td>
+                </tr>
+                <tr>
+                    <td><code>carlos@example.com</code></td>
+                    <td>User</td>
+                    <td>&gt;50</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>🎯 URLs Importantes</h2>
+            <div style="padding: 10px;">
+                <div class="url" style="display: block; margin: 10px 0;">http://localhost:3000 - Home</div>
+                <div class="url" style="display: block; margin: 10px 0;">http://localhost:3000/login - Login</div>
+                <div class="url" style="display: block; margin: 10px 0;">http://localhost:3000/admin - Panel Admin</div>
+                <div class="url" style="display: block; margin: 10px 0;">http://localhost:3000/test-runner.html - Tests</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🐛 ¿Problemas?</h2>
+            <div class="warning">
+                <strong>❌ No puedo acceder al admin</strong><br>
+                → Usa <code>ana@duocuc.cl</code> o <code>admin@example.com</code><br>
+                → La contraseña es opcional
+            </div>
+            <div class="warning">
+                <strong>❌ Ya inicié sesión como usuario normal</strong><br>
+                → Click en tu nombre (arriba a la derecha)<br>
+                → Selecciona "Cerrar Sesión"<br>
+                → Vuelve a login con email admin
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="http://localhost:3000/login" class="button">🚀 Ir a Login</a>
+            <a href="http://localhost:3000/admin" class="button">👤 Panel Admin</a>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px; color: #666;">
+            <p>📖 Más información en <code>ACCESO_DEMO.md</code></p>
+        </div>
+    </div>
+</body>
+</html>
