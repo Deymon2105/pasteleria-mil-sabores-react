@@ -8,32 +8,34 @@ export default function ProductCard({ product, onVerDetalles }) {
   const [imgError, setImgError] = useState(false)
   
   return (
-    <Card style={{ width: '18rem' }} className="m-2 product-card">
-      {imgError ? (
-        <div 
-          className="d-flex align-items-center justify-content-center" 
-          style={{ height: '200px', backgroundColor: '#f8f9fa', fontSize: '3rem' }}
-        >
-          🍰
-        </div>
-      ) : (
-        <Card.Img 
-          variant="top" 
-          src={product.image} 
-          alt={product.title}
-          onError={() => setImgError(true)}
-        />
-      )}
-      <Card.Body>
-        <Card.Title>{product.title}</Card.Title>
-        <Card.Text>${product.price.toLocaleString('es-CL')}</Card.Text>
-        <div className="d-flex gap-2">
-          <Button onClick={() => addToCart(product)} variant="primary">
+    <Card className="m-2 product-card h-100">
+      <div className="product-card__image-container">
+        {imgError ? (
+          <div 
+            className="d-flex align-items-center justify-content-center product-card__placeholder" 
+          >
+            🍰
+          </div>
+        ) : (
+          <Card.Img 
+            variant="top" 
+            src={product.image} 
+            alt={product.title}
+            onError={() => setImgError(true)}
+            className="product-card__image"
+          />
+        )}
+      </div>
+      <Card.Body className="d-flex flex-column">
+        <Card.Title className="product-card__title">{product.title}</Card.Title>
+        <Card.Text className="product-card__price">${product.price.toLocaleString('es-CL')}</Card.Text>
+        <div className="d-flex flex-column gap-2 mt-auto">
+          <Button onClick={() => addToCart(product)} variant="primary" className="w-100">
             Agregar al carrito
           </Button>
           {/* 👇 este botón usa la prop que puede venir desde Catalogo; protegemos su uso */}
           <Button
-            className="btn-detalles"
+            className="btn-detalles w-100"
             variant="secondary"
             onClick={() => {
               if (typeof onVerDetalles === 'function') onVerDetalles(product)

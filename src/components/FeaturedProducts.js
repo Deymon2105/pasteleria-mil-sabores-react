@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import {Row, Col } from 'react-bootstrap'
 import products from '../data/products'
 import ProductCard from './ProductCard'
 import ModalProducto from './ModalProducto'
@@ -16,11 +17,13 @@ export default function FeaturedProducts(){
   return (
     <section className="section section--featured container my-4">
       <h2 className="section__title">Destacados</h2>
-      <div className="d-flex flex-wrap">
+      <Row>
         {featured.map(p=> (
-          <ProductCard key={p.id} product={p} onVerDetalles={handleVerDetalles} />
+          <Col key={p.id} md={4} sm={6} xs={12} className="mb-4">
+            <ProductCard product={p} onVerDetalles={handleVerDetalles} />
+          </Col>
         ))}
-      </div>
+      </Row>
 
       {/* Modal de detalles usado en la Home */}
       {productoSeleccionado && (

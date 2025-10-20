@@ -9,36 +9,42 @@ export default function ModalProducto({ producto, onClose }) {
   if (!producto) return null
 
   return (
-    <Modal show onHide={onClose} centered>
+    <Modal show onHide={onClose} centered size="lg">
       <Modal.Header closeButton>
         <Modal.Title>{producto.title}</Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
-        <div className="text-center mb-3">
-          <Image
-            src={producto.image}
-            alt={producto.title}
-            fluid
-            rounded
-            onError={(e) => (e.target.src = '/images/placeholder.jpg')}
-            style={{ maxHeight: '300px', objectFit: 'cover' }}
-          />
+        <div className="row g-3">
+          <div className="col-md-6">
+            <div className="modal-producto__image-container">
+              <Image
+                src={producto.image}
+                alt={producto.title}
+                fluid
+                rounded
+                onError={(e) => (e.target.src = '/images/placeholder.jpg')}
+                className="modal-producto__image"
+              />
+            </div>
+          </div>
+          <div className="col-md-6">
+            <p className="mb-3">{producto.desc}</p>
+            <p className="mb-2">
+              <strong>Categoría:</strong> {producto.category}
+            </p>
+            <h5 className="text-primary">
+              <strong>Precio:</strong> ${producto.price.toLocaleString('es-CL')}
+            </h5>
+          </div>
         </div>
-        <p className="mb-2">{producto.desc}</p>
-        <p className="mb-2">
-          <strong>Categoría:</strong> {producto.category}
-        </p>
-        <h5 className="text-primary">
-          <strong>Precio:</strong> ${producto.price.toLocaleString('es-CL')}
-        </h5>
       </Modal.Body>
 
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>
+      <Modal.Footer className="d-flex flex-column flex-sm-row justify-content-between gap-2">
+        <Button variant="secondary" onClick={onClose} className="w-100 w-sm-auto">
           Cerrar
         </Button>
-        <Button variant="success" onClick={() => addToCart(producto)}>
+        <Button variant="success" onClick={() => addToCart(producto)} className="w-100 w-sm-auto">
           Agregar al carrito
         </Button>
       </Modal.Footer>
