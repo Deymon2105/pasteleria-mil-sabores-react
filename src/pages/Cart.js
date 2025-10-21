@@ -125,11 +125,16 @@ export default function Cart(){
   }
 
   //calcular total con descuentos
-  const montoDescuento = subtotal * (descuentoTotal / 100)
   // Monto DUOC aplicado: puede venir de la torta de cumpleaños (montoTortaGratis)
   // o del flujo general (duocDiscountAmount). Sumamos ambos por seguridad
   const duocAppliedAmount = (montoTortaGratis || 0) + (duocDiscountAmount || 0)
-  const total = subtotal - montoDescuento - duocAppliedAmount
+  // Los descuentos porcentuales deben aplicarse solo sobre el subtotal restante
+  // después de descontar la unidad gratis (para no aplicar porcentaje sobre la torta gratis)
+  const taxableSubtotal = Math.max(0, subtotal - duocAppliedAmount)
+  const montoDescuento = taxableSubtotal * (descuentoTotal / 100)
+  // Ahorro real aplicado no puede exceder el subtotal
+  const ahorroAplicado = Math.min(subtotal, montoDescuento + duocAppliedAmount)
+  const total = Math.max(0, subtotal - ahorroAplicado)
 
   if (cart.length === 0) {
     return (
@@ -243,11 +248,11 @@ export default function Cart(){
                       {desc.etiqueta}
                     </span>
                     <span className="text-success fw-bold">
-                      {desc.montoFijo ? (
-                        `-$${desc.montoFijo.toLocaleString('es-CL')}`
-                      ) : (
-                        `-$${(subtotal * (desc.valor / 100)).toLocaleString('es-CL')}`
-                      )}
+                        {desc.montoFijo ? (
+                          `-$${desc.montoFijo.toLocaleString('es-CL')}`
+                        ) : (
+                          `-$${(taxableSubtotal * (desc.valor / 100)).toLocaleString('es-CL')}`
+                        )}
                     </span>
                   </div>
                 ))}
@@ -280,7 +285,7 @@ export default function Cart(){
           {(descuentoTotal > 0 || duocAppliedAmount > 0) && (
             <div className="text-end mt-2">
               <small className="text-muted">
-                Ahorras: ${(montoDescuento + duocAppliedAmount).toLocaleString('es-CL')}
+                Ahorras: ${ahorroAplicado.toLocaleString('es-CL')}
                 {descuentoTotal > 0 && ` (${descuentoTotal}%)`}
                 {tortaGratisCumpleanios && ' + Torta Gratis 🎂'}
               </small>

@@ -74,24 +74,27 @@ export default function Compra() {
     let tortaGratisCumpleanios = false;
     let montoTortaGratis = 0;
     
+    // Calcular DUOC (torta gratis) — manejamos caso cumpleaños y caso general
+    let duocDiscountAmount = 0;
+    let duocItem = null;
+
     // Verificar torta gratis por cumpleaños (beneficio DUOC)
     if (userBenefits.includes('DUOC') && esCumpleanios()) {
-        // Buscar si hay tortas en el carrito
+        // Buscar si hay tortas en el carrito (por categoría o title)
         const tortasEnCarrito = carritoParaCalcular.filter(p => 
-            p.category && (
-                p.category.includes('Torta') || 
-                p.category.includes('Especial') ||
-                p.title.toLowerCase().includes('torta')
-            )
+            (p.category && (p.category.toString().toLowerCase().includes('torta') || p.category.toString().toLowerCase().includes('especial'))) ||
+            (p.title && p.title.toString().toLowerCase().includes('torta'))
         );
-        
+
         if (tortasEnCarrito.length > 0) {
             // Aplicar descuento de la torta más barata
             const tortaMasBarata = tortasEnCarrito.reduce((min, torta) => 
-                torta.price < min.price ? torta : min
-            );
+                (min == null || torta.price < min.price) ? torta : min
+            , null);
             montoTortaGratis = tortaMasBarata.price;
             tortaGratisCumpleanios = true;
+            duocItem = tortaMasBarata;
+            duocDiscountAmount = montoTortaGratis;
             detallesDescuento.push({ 
                 etiqueta: '🎂 Torta gratis por cumpleaños (DUOC)', 
                 valor: 0,
@@ -111,8 +114,27 @@ export default function Compra() {
     }
     
     const hasDuocBenefit = userBenefits.includes('DUOC');
-    const montoDescuento = subtotal * (descuentoTotal / 100);
-    const total = subtotal - montoDescuento - montoTortaGratis;
+    // Si no aplicó por cumpleaños, buscar torta elegible en flujo general
+    if (hasDuocBenefit && !tortaGratisCumpleanios) {
+        const eligibleCakeItems = carritoParaCalcular.filter(item => item && item.title && item.title.toString().toLowerCase().includes('torta'));
+        if (eligibleCakeItems.length > 0) {
+            const cheapestCake = eligibleCakeItems.reduce((min, item) => (min == null || item.price < (min.price || Infinity)) ? item : min, null);
+            if (cheapestCake) {
+                // aplicar como monto fijo (una unidad)
+                duocItem = cheapestCake;
+                duocDiscountAmount = cheapestCake.price || 0;
+                detallesDescuento.push({ etiqueta: '🎂 Torta gratis (DUOC)', valor: 0, montoFijo: duocDiscountAmount });
+            }
+        }
+    }
+
+    const duocAppliedAmount = (montoTortaGratis || 0) + (duocDiscountAmount || 0);
+    const taxableSubtotal = Math.max(0, subtotal - duocAppliedAmount);
+    const montoDescuento = taxableSubtotal * (descuentoTotal / 100);
+    const ahorroAplicado = Math.min(subtotal, montoDescuento + duocAppliedAmount);
+    const total = Math.max(0, subtotal - ahorroAplicado);
+    // Evitar mostrar dos veces el mismo descuento DUOC si ya está en detallesDescuento
+    const duocInDetails = detallesDescuento.some(desc => desc && desc.montoFijo && /duoc/i.test(desc.etiqueta || ''));
 
     const manejarEnvio = (e) => {
         e.preventDefault();
@@ -530,11 +552,21 @@ export default function Compra() {
                                                     {desc.montoFijo ? (
                                                         `-$${desc.montoFijo.toLocaleString('es-CL')}`
                                                     ) : (
-                                                        `-$${(subtotal * (desc.valor / 100)).toLocaleString('es-CL')}`
+                                                            `-$${(taxableSubtotal * (desc.valor / 100)).toLocaleString('es-CL')}`
                                                     )}
                                                 </span>
                                             </div>
                                         ))}
+                                        {/* Mostrar DUOC si hay monto aplicado */}
+                                        { !duocInDetails && duocAppliedAmount > 0 && (
+                                            <div className="d-flex justify-content-between align-items-center mt-1">
+                                                <span className="text-success">
+                                                    <Badge bg="info" className="me-2">Producto gratis</Badge>
+                                                    {duocItem ? `${duocItem.title} (beneficio DUOC)` : 'Torta gratis (beneficio DUOC)'}
+                                                </span>
+                                                <span className="text-success fw-bold">-${duocAppliedAmount.toLocaleString('es-CL')}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -553,6 +585,16 @@ export default function Compra() {
 
                             <hr />
                             
+                            {(descuentoTotal > 0 || duocAppliedAmount > 0) && (
+                                <div className="text-end mb-2">
+                                    <small className="text-muted">
+                                        Ahorras: ${ahorroAplicado.toLocaleString('es-CL')}
+                                        {descuentoTotal > 0 && ` (${descuentoTotal}%)`}
+                                        {tortaGratisCumpleanios && ' + Torta Gratis 🎂'}
+                                    </small>
+                                </div>
+                            )}
+
                             <div className="d-flex justify-content-between">
                                 <h4>Total:</h4>
                                 <h4 className="text-success">${total.toLocaleString('es-CL')}</h4>
