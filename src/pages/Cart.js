@@ -83,10 +83,10 @@ export default function Cart(){
     }
   }
 
-  // Descuento mayores de 50 (10%)
+  // Descuento mayores de 50 (50%)
   if (userBenefits.includes('>50')) {
-    descuentoTotal += 10
-    detallesDescuento.push({ etiqueta: 'Descuento mayores de 50 años', valor: 10 })
+    descuentoTotal += 50
+    detallesDescuento.push({ etiqueta: 'Descuento mayores de 50 años', valor: 50 })
   }
 
   // Descuento código FELICES50 (10%)
@@ -126,8 +126,10 @@ export default function Cart(){
 
   //calcular total con descuentos
   const montoDescuento = subtotal * (descuentoTotal / 100)
-  // Restar también el monto de la torta gratis (si aplica)
-  const total = subtotal - montoDescuento - montoTortaGratis
+  // Monto DUOC aplicado: puede venir de la torta de cumpleaños (montoTortaGratis)
+  // o del flujo general (duocDiscountAmount). Sumamos ambos por seguridad
+  const duocAppliedAmount = (montoTortaGratis || 0) + (duocDiscountAmount || 0)
+  const total = subtotal - montoDescuento - duocAppliedAmount
 
   if (cart.length === 0) {
     return (
@@ -250,19 +252,19 @@ export default function Cart(){
                   </div>
                 ))}
                 {/* DUOC: producto gratis (una unidad) */}
-                {hasDuocBenefit && duocDiscountAmount > 0 && (
+                {hasDuocBenefit && duocAppliedAmount > 0 && (
                   <div className="d-flex justify-content-between align-items-center mt-2">
                     <span className="text-success">
                       <Badge bg="info" className="me-2">Producto gratis</Badge>
-                      {duocItem ? `${duocItem.title} (beneficio DUOC)` : 'Producto más caro (beneficio DUOC)'}
+                      {duocItem ? `${duocItem.title} (beneficio DUOC)` : 'Producto elegible (beneficio DUOC)'}
                     </span>
-                    <span className="text-success fw-bold">-${duocDiscountAmount.toLocaleString('es-CL')}</span>
+                    <span className="text-success fw-bold">-{duocAppliedAmount.toLocaleString('es-CL')}</span>
                   </div>
                 )}
                 <div className="d-flex justify-content-between align-items-center mt-2">
                   <span className="fw-bold">Total descuento:</span>
                   <span className="text-success fw-bold">
-                    -{descuentoTotal}% (-${(montoDescuento + montoTortaGratis).toLocaleString('es-CL')})
+                    -{descuentoTotal}% (-${(montoDescuento + duocAppliedAmount).toLocaleString('es-CL')})
                   </span>
                 </div>
               </div>
@@ -275,10 +277,10 @@ export default function Cart(){
             <h4 className="mb-0 text-success">${total.toLocaleString('es-CL')}</h4>
           </div>
           
-          {(descuentoTotal > 0 || montoTortaGratis > 0) && (
+          {(descuentoTotal > 0 || duocAppliedAmount > 0) && (
             <div className="text-end mt-2">
               <small className="text-muted">
-                Ahorras: ${(montoDescuento + montoTortaGratis).toLocaleString('es-CL')}
+                Ahorras: ${(montoDescuento + duocAppliedAmount).toLocaleString('es-CL')}
                 {descuentoTotal > 0 && ` (${descuentoTotal}%)`}
                 {tortaGratisCumpleanios && ' + Torta Gratis 🎂'}
               </small>
