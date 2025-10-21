@@ -56,9 +56,49 @@ export default function Compra() {
     const carritoParaCalcular = cart.length > 0 ? cart : carritoInicial;
     const subtotal = carritoParaCalcular.reduce((s, p) => s + (p.price * (p.qty || 1)), 0);
     
+    // Función para verificar si es el cumpleaños del usuario
+    const esCumpleanios = () => {
+        if (!usuarioActual?.birthdate) return false;
+        
+        const hoy = new Date();
+        const fechaNacimiento = new Date(usuarioActual.birthdate);
+        
+        // Comparar mes y día
+        return hoy.getMonth() === fechaNacimiento.getMonth() && 
+               hoy.getDate() === fechaNacimiento.getDate();
+    };
+    
     // Calcular descuentos basados en benefits array
     let descuentoTotal = 0;
     let detallesDescuento = [];
+    let tortaGratisCumpleanios = false;
+    let montoTortaGratis = 0;
+    
+    // Verificar torta gratis por cumpleaños (beneficio DUOC)
+    if (userBenefits.includes('DUOC') && esCumpleanios()) {
+        // Buscar si hay tortas en el carrito
+        const tortasEnCarrito = carritoParaCalcular.filter(p => 
+            p.category && (
+                p.category.includes('Torta') || 
+                p.category.includes('Especial') ||
+                p.title.toLowerCase().includes('torta')
+            )
+        );
+        
+        if (tortasEnCarrito.length > 0) {
+            // Aplicar descuento de la torta más barata
+            const tortaMasBarata = tortasEnCarrito.reduce((min, torta) => 
+                torta.price < min.price ? torta : min
+            );
+            montoTortaGratis = tortaMasBarata.price;
+            tortaGratisCumpleanios = true;
+            detallesDescuento.push({ 
+                etiqueta: '🎂 Torta gratis por cumpleaños (DUOC)', 
+                valor: 0,
+                montoFijo: montoTortaGratis 
+            });
+        }
+    }
     
     if (userBenefits.includes('>50')) {
         descuentoTotal += 50;
@@ -72,7 +112,7 @@ export default function Compra() {
     
     const hasDuocBenefit = userBenefits.includes('DUOC');
     const montoDescuento = subtotal * (descuentoTotal / 100);
-    const total = subtotal - montoDescuento;
+    const total = subtotal - montoDescuento - montoTortaGratis;
 
     const manejarEnvio = (e) => {
         e.preventDefault();
@@ -477,13 +517,21 @@ export default function Compra() {
                                     <div className="mb-2">
                                         <strong className="text-success">Descuentos:</strong>
                                         {detallesDescuento.map((desc, idx) => (
-                                            <div key={idx} className="d-flex justify-content-between align-items-center">
+                                            <div key={idx} className="d-flex justify-content-between align-items-center mt-1">
                                                 <span className="text-success">
-                                                    <Badge bg="success" className="me-2">{desc.valor}%</Badge>
+                                                    {desc.montoFijo ? (
+                                                        <Badge bg="warning" text="dark" className="me-2">GRATIS</Badge>
+                                                    ) : (
+                                                        <Badge bg="success" className="me-2">{desc.valor}%</Badge>
+                                                    )}
                                                     {desc.etiqueta}
                                                 </span>
-                                                <span className="text-success">
-                                                    -${(subtotal * (desc.valor / 100)).toLocaleString('es-CL')}
+                                                <span className="text-success fw-bold">
+                                                    {desc.montoFijo ? (
+                                                        `-$${desc.montoFijo.toLocaleString('es-CL')}`
+                                                    ) : (
+                                                        `-$${(subtotal * (desc.valor / 100)).toLocaleString('es-CL')}`
+                                                    )}
                                                 </span>
                                             </div>
                                         ))}
@@ -492,8 +540,14 @@ export default function Compra() {
                             )}
 
                             {hasDuocBenefit && (
-                                <Alert variant="info" className="mt-2 mb-2 py-2">
-                                    <small><strong>Beneficio DUOC:</strong> Torta gratis en tu cumpleaños</small>
+                                <Alert variant={tortaGratisCumpleanios ? "success" : "info"} className="mt-2 mb-2 py-2">
+                                    {tortaGratisCumpleanios ? (
+                                        <small><strong>🎉 ¡Feliz Cumpleaños!</strong> Tu torta es GRATIS (Beneficio DUOC)</small>
+                                    ) : esCumpleanios() ? (
+                                        <small><strong>🎂 ¡Es tu cumpleaños!</strong> Agrega una torta al carrito y será gratis (Beneficio DUOC)</small>
+                                    ) : (
+                                        <small><strong>Beneficio DUOC:</strong> Torta gratis en tu cumpleaños</small>
+                                    )}
                                 </Alert>
                             )}
 
