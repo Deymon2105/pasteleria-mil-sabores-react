@@ -101,7 +101,7 @@ export default function Register() {
       // Mostrar beneficios obtenidos
       let benefitMsgs = [];
       if (submittedAge >= 50) {
-        benefitMsgs.push('🎉 50% de descuento en todos los productos (mayores de 50)');
+        benefitMsgs.push('🎉 10% de descuento en todos los productos (mayores de 50)');
       }
       if (data.promoCode?.trim() === 'FELICES50') {
         benefitMsgs.push('🎁 10% de descuento adicional con código FELICES50');
@@ -136,7 +136,7 @@ export default function Register() {
             <Alert variant="success" className="benefits-alert">
               <h6 className="mb-2">🎉 Beneficios activados:</h6>
               {hasSeniorDiscount && (
-                <Badge bg="success" className="me-2 mb-1">50% descuento senior</Badge>
+                <Badge bg="success" className="me-2 mb-1">10% descuento senior</Badge>
               )}
               {hasPromoDiscount && (
                 <Badge bg="info" className="me-2 mb-1">10% descuento FELICES50</Badge>

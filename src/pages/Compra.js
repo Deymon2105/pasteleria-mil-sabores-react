@@ -101,8 +101,8 @@ export default function Compra() {
     }
     
     if (userBenefits.includes('>50')) {
-        descuentoTotal += 50;
-        detallesDescuento.push({ etiqueta: 'Descuento mayores de 50 años', valor: 50 });
+        descuentoTotal += 10;
+        detallesDescuento.push({ etiqueta: 'Descuento mayores de 50 años', valor: 10 });
     }
     
     if (userBenefits.includes('FELICES50')) {

@@ -76,10 +76,10 @@ export default function Cart(){
     }
   }
 
-  // Descuento mayores de 50 (50%)
+  // Descuento mayores de 50 (10%)
   if (userBenefits.includes('>50')) {
-    descuentoTotal += 50
-    detallesDescuento.push({ etiqueta: 'Descuento mayores de 50 años', valor: 50 })
+    descuentoTotal += 10
+    detallesDescuento.push({ etiqueta: 'Descuento mayores de 50 años', valor: 10 })
   }
 
   // Descuento código FELICES50 (10%)
