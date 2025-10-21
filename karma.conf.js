@@ -5,7 +5,7 @@ module.exports = function(config) {
     files: [
       'test/**/*.spec.js'
     ],
-    browsers: ['PhantomJS'],
+    browsers: ['ChromeHeadless'],
     singleRun: true,
     preprocessors: {},
     reporters: ['progress', 'dots'],
