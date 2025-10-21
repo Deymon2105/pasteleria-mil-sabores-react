@@ -50,6 +50,10 @@ export default function Cart(){
   let tortaGratisCumpleanios = false
   let montoTortaGratis = 0
 
+  // Declaraciones para el flujo DUOC (se usan más abajo y en el bloque de cumpleaños)
+  let duocDiscountAmount = 0
+  let duocItem = null
+
   // Verificar torta gratis por cumpleaños (beneficio DUOC)
   if (userBenefits.includes('DUOC') && esCumpleanios()) {
     // Buscar si hay tortas en el carrito
@@ -68,6 +72,9 @@ export default function Cart(){
       )
       montoTortaGratis = tortaMasBarata.price
       tortaGratisCumpleanios = true
+      // Marcar duoc item/amount para que la UI lo refleje en el listado de items
+      duocItem = tortaMasBarata
+      duocDiscountAmount = montoTortaGratis
       detallesDescuento.push({ 
         etiqueta: '🎂 Torta gratis por cumpleaños (DUOC)', 
         valor: 0,
@@ -91,10 +98,10 @@ export default function Cart(){
   // Beneficio DUOC (torta gratis en cumpleaños, no aplica descuento aquí)
   const hasDuocBenefit = userBenefits.includes('DUOC')
 
-  // --- Calcular descuento DUOC: el producto más caro del carrito (una unidad), sin importar categoría ---
-  let duocDiscountAmount = 0
-  let duocItem = null
-  if (hasDuocBenefit && cart && cart.length > 0) {
+  // --- Calcular descuento DUOC para el caso NO cumpleaños ---
+  // Nota: si ya se aplicó la torta gratis por cumpleaños (tortaGratisCumpleanios===true),
+  // no ejecutamos esta búsqueda para evitar sobreescribir el duocItem/amount.
+  if (hasDuocBenefit && cart && cart.length > 0 && !tortaGratisCumpleanios) {
     // Nuevo requisito: aplicar el beneficio a la TORTA más barata
     // cuya *title* contenga la palabra 'torta' (case-insensitive).
     const eligibleCakeItems = cart.filter(item => {
@@ -119,7 +126,8 @@ export default function Cart(){
 
   //calcular total con descuentos
   const montoDescuento = subtotal * (descuentoTotal / 100)
-  const total = subtotal - montoDescuento
+  // Restar también el monto de la torta gratis (si aplica)
+  const total = subtotal - montoDescuento - montoTortaGratis
 
   if (cart.length === 0) {
     return (
