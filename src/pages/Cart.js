@@ -43,9 +43,35 @@ export default function Cart(){
   // Beneficio DUOC (torta gratis en cumpleaños, no aplica descuento aquí)
   const hasDuocBenefit = userBenefits.includes('DUOC')
 
+  // --- Calcular descuento DUOC: el producto más caro del carrito (una unidad), sin importar categoría ---
+  let duocDiscountAmount = 0
+  let duocItem = null
+  if (hasDuocBenefit && cart && cart.length > 0) {
+    // Nuevo requisito: aplicar el beneficio a la TORTA más barata
+    // cuya *title* contenga la palabra 'torta' (case-insensitive).
+    const eligibleCakeItems = cart.filter(item => {
+      if (!item || !item.title) return false
+      return item.title.toString().toLowerCase().includes('torta')
+    })
+
+    if (eligibleCakeItems.length > 0) {
+      // Seleccionar la torta con menor precio unitario
+      const cheapestCake = eligibleCakeItems.reduce((min, item) => {
+        if (!min) return item
+        return (item.price < (min.price || Infinity)) ? item : min
+      }, null)
+
+      if (cheapestCake) {
+        duocItem = cheapestCake
+        // Beneficio aplica a una sola unidad (la más barata encontrada)
+        duocDiscountAmount = cheapestCake.price || 0
+      }
+    }
+  }
+
   //calcular total con descuentos
   const montoDescuento = subtotal * (descuentoTotal / 100)
-  const total = subtotal - montoDescuento
+  const total = subtotal - montoDescuento - duocDiscountAmount
 
   if (cart.length === 0) {
     return (
@@ -87,27 +113,51 @@ export default function Cart(){
       )}
 
       <ListGroup className="mt-3">
-        {cart.map(item=> (
-          <ListGroup.Item key={item.id} className="d-flex justify-content-between align-items-center">
-            <div className="flex-grow-1">
-              <strong>{item.title}</strong>
-              <br />
-              <small className="text-muted">Precio unitario: ${item.price.toLocaleString('es-CL')}</small>
-              {' | '}
-              <small className="text-muted">Cantidad: {item.qty || 1}</small>
-            </div>
-            <div className="d-flex align-items-center gap-3">
-              <span className="fw-bold">${(item.price*(item.qty||1)).toLocaleString('es-CL')}</span>
-              <Button 
-                variant="outline-danger" 
-                size="sm"
-                onClick={()=>removeFromCart(item.id)}
-              >
-                Eliminar
-              </Button>
-            </div>
-          </ListGroup.Item>
-        ))}
+        {cart.map(item=> {
+          const qty = item.qty || 1
+          const itemTotal = item.price * qty
+          const isDuocApplied = hasDuocBenefit && duocItem && duocItem.id === item.id && duocDiscountAmount > 0
+          const billedAmount = isDuocApplied ? Math.max(0, itemTotal - item.price) : itemTotal
+
+          return (
+            <ListGroup.Item key={item.id} className="d-flex justify-content-between align-items-center">
+              <div className="flex-grow-1">
+                <div className="d-flex align-items-center gap-2">
+                  <strong>{item.title}</strong>
+                  {isDuocApplied && (
+                    <Badge bg="info" pill style={{ fontSize: '0.75rem' }}>
+                      1 unidad gratis
+                    </Badge>
+                  )}
+                </div>
+                <div>
+                  <small className="text-muted">Precio unitario: ${item.price.toLocaleString('es-CL')}</small>
+                  {' | '}
+                  <small className="text-muted">Cantidad: {qty}</small>
+                </div>
+              </div>
+              <div className="d-flex align-items-center gap-3">
+                <div className="text-end">
+                  {isDuocApplied ? (
+                    <>
+                      <div className="fw-bold">${billedAmount.toLocaleString('es-CL')}</div>
+                      <div className="text-muted" style={{ fontSize: '0.8rem' }}>(-{item.price.toLocaleString('es-CL')} por 1 unidad gratis)</div>
+                    </>
+                  ) : (
+                    <span className="fw-bold">${billedAmount.toLocaleString('es-CL')}</span>
+                  )}
+                </div>
+                <Button 
+                  variant="outline-danger" 
+                  size="sm"
+                  onClick={()=>removeFromCart(item.id)}
+                >
+                  Eliminar
+                </Button>
+              </div>
+            </ListGroup.Item>
+          )
+        })}
       </ListGroup>
       
       {/* Resumen de compra */}
@@ -135,6 +185,16 @@ export default function Cart(){
                     </span>
                   </div>
                 ))}
+                {/* DUOC: producto gratis (una unidad) */}
+                {hasDuocBenefit && duocDiscountAmount > 0 && (
+                  <div className="d-flex justify-content-between align-items-center mt-2">
+                    <span className="text-success">
+                      <Badge bg="info" className="me-2">Producto gratis</Badge>
+                      {duocItem ? `${duocItem.title} (beneficio DUOC)` : 'Producto más caro (beneficio DUOC)'}
+                    </span>
+                    <span className="text-success fw-bold">-${duocDiscountAmount.toLocaleString('es-CL')}</span>
+                  </div>
+                )}
                 <div className="d-flex justify-content-between align-items-center mt-2">
                   <span className="fw-bold">Total descuento:</span>
                   <span className="text-success fw-bold">
