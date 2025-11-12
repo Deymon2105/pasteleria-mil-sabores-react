@@ -471,16 +471,6 @@ export default function Compra() {
                                                 </span>
                                             </div>
                                         ))}
-                                        {/* Mostrar DUOC si hay monto aplicado */}
-                                        { !duocInDetails && duocAppliedAmount > 0 && (
-                                            <div className="d-flex justify-content-between align-items-center mt-1">
-                                                <span className="text-success">
-                                                    <Badge bg="info" className="me-2">Producto gratis</Badge>
-                                                    {duocItem ? `${duocItem.title} (beneficio DUOC)` : 'Torta gratis (beneficio DUOC)'}
-                                                </span>
-                                                <span className="text-success fw-bold">-${duocAppliedAmount.toLocaleString('es-CL')}</span>
-                                            </div>
-                                        )}
                                     </div>
                                 </>
                             )}
@@ -493,12 +483,10 @@ export default function Compra() {
 
                             <hr />
                             
-                            {(descuentoTotal > 0 || duocAppliedAmount > 0) && (
+                            {descuentoTotal > 0 && (
                                 <div className="text-end mb-2">
                                     <small className="text-muted">
-                                        Ahorras: ${ahorroAplicado.toLocaleString('es-CL')}
-                                        {descuentoTotal > 0 && ` (${descuentoTotal}%)`}
-                                        {tortaGratisCumpleanios && ' + Torta Gratis 🎂'}
+                                        Ahorras: ${montoDescuento.toLocaleString('es-CL')} ({descuentoTotal}%)
                                     </small>
                                 </div>
                             )}
