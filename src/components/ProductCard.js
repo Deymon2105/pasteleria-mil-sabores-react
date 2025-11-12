@@ -19,7 +19,7 @@ export default function ProductCard({ product, onVerDetalles }) {
         ) : (
           <Card.Img 
             variant="top" 
-            src={product.image} 
+            src={process.env.PUBLIC_URL + product.image} 
             alt={product.title}
             onError={() => setImgError(true)}
             className="product-card__image"

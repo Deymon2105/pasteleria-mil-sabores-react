@@ -2,24 +2,62 @@ import React, { useState } from 'react'
 import useAdminData from './useAdminData'
 
 export default function Orders(){
-  const { orders, updateOrderStatus } = useAdminData()
+  const { orders, updateOrderStatus, loading, error } = useAdminData()
   const [expandedOrder, setExpandedOrder] = useState(null)
+  const [updating, setUpdating] = useState(false)
 
-  const handleChange = (code, e) => {
-    updateOrderStatus(code, e.target.value)
+  const handleChange = async (code, e) => {
+    try {
+      setUpdating(true)
+      await updateOrderStatus(code, e.target.value)
+      alert('Estado del pedido actualizado exitosamente')
+    } catch (err) {
+      alert('Error al actualizar el estado del pedido')
+    } finally {
+      setUpdating(false)
+    }
   }
 
   const toggleExpand = (code) => {
     setExpandedOrder(expandedOrder === code ? null : code)
   }
 
+  if (loading) {
+    return (
+      <div style={{textAlign: 'center', padding: '50px'}}>
+        <div className="spinner-border" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+        <p>Cargando pedidos...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{padding: '20px'}}>
+        <div className="alert alert-danger">{error}</div>
+      </div>
+    )
+  }
+
   return (
     <div>
-      <h1 className="page__title">Pedidos</h1>
+      <h1 className="page__title">Pedidos ({orders.length})</h1>
+      {updating && (
+        <div style={{position: 'fixed', top: '10px', right: '10px', background: '#007bff', color: 'white', padding: '10px', borderRadius: '5px', zIndex: 9999}}>
+          Actualizando estado...
+        </div>
+      )}
       <section className="card">
         <h2 className="card__title">En curso</h2>
-        <div id="admin-orders" className="order-list">
-          {orders.map(o=> (
+        {orders.length === 0 ? (
+          <div style={{padding: '20px', textAlign: 'center', color: '#666'}}>
+            <p>No hay pedidos registrados</p>
+          </div>
+        ) : (
+          <div id="admin-orders" className="order-list">
+            {orders.map(o=> (
             <div className="card" key={o.code}>
               <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <div>
@@ -74,7 +112,8 @@ export default function Orders(){
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        )}
       </section>
     </div>
   )

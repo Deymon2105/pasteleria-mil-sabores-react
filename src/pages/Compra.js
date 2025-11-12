@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Form, Button, Alert, ListGroup, Badge } from "react-bootstrap";
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { orderService } from '../service/api';
 import { useNavigate } from 'react-router-dom';
 
 export default function Compra() {
     const { cart, clearCart } = useCart();
+    const { currentUser } = useAuth();
     const navegar = useNavigate();
     
     const [mostrarAlertaCompraAnulada, setMostrarAlertaCompraAnulada] = useState(false);
@@ -22,28 +25,20 @@ export default function Compra() {
         fechaVencimiento: '',
         cvv: ''
     });
-    const [usuarioActual, setUsuarioActual] = useState(null);
     const [userBenefits, setUserBenefits] = useState([]);
     const [cargando, setCargando] = useState(false);
     const [carritoInicial, setCarritoInicial] = useState([]);
 
-    //funcion para obtener usuario y beneficios al cargar la página
+    // Obtener usuario y beneficios desde el contexto
     useEffect(() => {
-        const usuarioStr = localStorage.getItem('currentUser');
-        if (usuarioStr) {
-            try {
-                const usuario = JSON.parse(usuarioStr);
-                setUsuarioActual(usuario);
-                setUserBenefits(usuario.benefits || []);
-                // Pre-llenar nombre y correo
-                setDatosFormulario(prev => ({
-                    ...prev,
-                    nombre: usuario.name || '',
-                    correo: usuario.email || ''
-                }));
-            } catch (error) {
-                console.error('Error al cargar usuario:', error);
-            }
+        if (currentUser) {
+            setUserBenefits(currentUser.benefits || []);
+            // Pre-llenar nombre y correo
+            setDatosFormulario(prev => ({
+                ...prev,
+                nombre: currentUser.name || '',
+                correo: currentUser.email || ''
+            }));
         }
         if (carritoInicial.length === 0 && cart.length > 0) {
             setCarritoInicial([...cart]);
@@ -51,54 +46,14 @@ export default function Compra() {
         if (cart.length === 0 && carritoInicial.length === 0 && !mostrarAlertaCompraExitosa) {
             navegar('/cart');
         }
-    }, [cart, navegar, carritoInicial.length, mostrarAlertaCompraExitosa]);
+    }, [cart, navegar, carritoInicial.length, mostrarAlertaCompraExitosa, currentUser]);
 
     const carritoParaCalcular = cart.length > 0 ? cart : carritoInicial;
     const subtotal = carritoParaCalcular.reduce((s, p) => s + (p.price * (p.qty || 1)), 0);
     
-    // Función para verificar si es el cumpleaños del usuario
-    const esCumpleanios = () => {
-        if (!usuarioActual?.birthdate) return false;
-        
-        const hoy = new Date();
-        const fechaNacimiento = new Date(usuarioActual.birthdate);
-        
-        // Comparar mes y día
-        return hoy.getMonth() === fechaNacimiento.getMonth() && 
-               hoy.getDate() === fechaNacimiento.getDate();
-    };
-    
     // Calcular descuentos basados en benefits array
     let descuentoTotal = 0;
     let detallesDescuento = [];
-    let tortaGratisCumpleanios = false;
-    let montoTortaGratis = 0;
-    
-    // Verificar torta gratis por cumpleaños (beneficio DUOC)
-    if (userBenefits.includes('DUOC') && esCumpleanios()) {
-        // Buscar si hay tortas en el carrito
-        const tortasEnCarrito = carritoParaCalcular.filter(p => 
-            p.category && (
-                p.category.includes('Torta') || 
-                p.category.includes('Especial') ||
-                p.title.toLowerCase().includes('torta')
-            )
-        );
-        
-        if (tortasEnCarrito.length > 0) {
-            // Aplicar descuento de la torta más barata
-            const tortaMasBarata = tortasEnCarrito.reduce((min, torta) => 
-                torta.price < min.price ? torta : min
-            );
-            montoTortaGratis = tortaMasBarata.price;
-            tortaGratisCumpleanios = true;
-            detallesDescuento.push({ 
-                etiqueta: '🎂 Torta gratis por cumpleaños (DUOC)', 
-                valor: 0,
-                montoFijo: montoTortaGratis 
-            });
-        }
-    }
     
     if (userBenefits.includes('>50')) {
         descuentoTotal += 50;
@@ -112,9 +67,9 @@ export default function Compra() {
     
     const hasDuocBenefit = userBenefits.includes('DUOC');
     const montoDescuento = subtotal * (descuentoTotal / 100);
-    const total = subtotal - montoDescuento - montoTortaGratis;
+    const total = subtotal - montoDescuento;
 
-    const manejarEnvio = (e) => {
+    const manejarEnvio = async (e) => {
         e.preventDefault();
         setCargando(true);
         
@@ -171,20 +126,21 @@ export default function Compra() {
 
         if (pagoExitoso) {
             try {
-                // Crear objeto de compra
-                const compra = {
-                    id: Date.now(),
-                    idUsuario: usuarioActual?.id || 'invitado',
-                    nombreUsuario: datosFormulario.nombre,
-                    correoUsuario: datosFormulario.correo,
-                    productos: carritoInicial.map(item => ({
-                        id: item.id,
-                        titulo: item.title,
-                        precio: item.price,
-                        cantidad: item.qty || 1,
-                        subtotal: item.price * (item.qty || 1)
+                // Crear objeto de pedido para enviar al backend
+                const orderData = {
+                    code: `ORD-${Date.now()}`,
+                    customerName: datosFormulario.nombre,
+                    email: datosFormulario.correo,
+                    date: new Date().toISOString(),
+                    status: 'Pendiente',
+                    total: total,
+                    items: carritoInicial.map(item => ({
+                        productId: item.id,
+                        productTitle: item.title,
+                        quantity: item.qty || 1,
+                        price: item.price
                     })),
-                    direccion: {
+                    address: {
                         calle: datosFormulario.calle,
                         depto: datosFormulario.depto,
                         region: datosFormulario.region,
@@ -192,24 +148,12 @@ export default function Compra() {
                         indicaciones: datosFormulario.mensaje
                     },
                     subtotal: subtotal,
-                    descuentos: detallesDescuento,
-                    totalDescuento: montoDescuento,
-                    total: total,
-                    fecha: new Date().toISOString(),
-                    estado: 'completado'
+                    discounts: detallesDescuento,
+                    totalDiscount: montoDescuento
                 };
 
-                // Guardar en localStorage
-                let compras = [];
-                try {
-                    compras = JSON.parse(localStorage.getItem('compras') || '[]');
-                    if (!Array.isArray(compras)) compras = [];
-                } catch (error) {
-                    compras = [];
-                }
-
-                compras.push(compra);
-                localStorage.setItem('compras', JSON.stringify(compras));
+                // Enviar al backend
+                await orderService.create(orderData);
 
                 clearCart();
                 setMostrarAlertaCompraExitosa(true);
@@ -218,8 +162,8 @@ export default function Compra() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 // Resetear formulario
                 setDatosFormulario({
-                    nombre: usuarioActual?.name || '', 
-                    correo: usuarioActual?.email || '', 
+                    nombre: currentUser?.name || '', 
+                    correo: currentUser?.email || '', 
                     calle: '', 
                     depto: '', 
                     region: '', 
@@ -323,7 +267,7 @@ export default function Compra() {
                                         placeholder="Juan Pérez" 
                                         value={datosFormulario.nombre}
                                         onChange={manejarCambio}
-                                        disabled={!!usuarioActual}
+                                        disabled={!!currentUser}
                                         required 
                                     />
                                 </Form.Group>
@@ -336,7 +280,7 @@ export default function Compra() {
                                         placeholder="tu@email.com"
                                         value={datosFormulario.correo}
                                         onChange={manejarCambio}
-                                        disabled={!!usuarioActual}
+                                        disabled={!!currentUser}
                                         required
                                     />
                                 </Form.Group>
@@ -517,21 +461,13 @@ export default function Compra() {
                                     <div className="mb-2">
                                         <strong className="text-success">Descuentos:</strong>
                                         {detallesDescuento.map((desc, idx) => (
-                                            <div key={idx} className="d-flex justify-content-between align-items-center mt-1">
+                                            <div key={idx} className="d-flex justify-content-between align-items-center">
                                                 <span className="text-success">
-                                                    {desc.montoFijo ? (
-                                                        <Badge bg="warning" text="dark" className="me-2">GRATIS</Badge>
-                                                    ) : (
-                                                        <Badge bg="success" className="me-2">{desc.valor}%</Badge>
-                                                    )}
+                                                    <Badge bg="success" className="me-2">{desc.valor}%</Badge>
                                                     {desc.etiqueta}
                                                 </span>
-                                                <span className="text-success fw-bold">
-                                                    {desc.montoFijo ? (
-                                                        `-$${desc.montoFijo.toLocaleString('es-CL')}`
-                                                    ) : (
-                                                        `-$${(subtotal * (desc.valor / 100)).toLocaleString('es-CL')}`
-                                                    )}
+                                                <span className="text-success">
+                                                    -${(subtotal * (desc.valor / 100)).toLocaleString('es-CL')}
                                                 </span>
                                             </div>
                                         ))}
@@ -540,14 +476,8 @@ export default function Compra() {
                             )}
 
                             {hasDuocBenefit && (
-                                <Alert variant={tortaGratisCumpleanios ? "success" : "info"} className="mt-2 mb-2 py-2">
-                                    {tortaGratisCumpleanios ? (
-                                        <small><strong>🎉 ¡Feliz Cumpleaños!</strong> Tu torta es GRATIS (Beneficio DUOC)</small>
-                                    ) : esCumpleanios() ? (
-                                        <small><strong>🎂 ¡Es tu cumpleaños!</strong> Agrega una torta al carrito y será gratis (Beneficio DUOC)</small>
-                                    ) : (
-                                        <small><strong>Beneficio DUOC:</strong> Torta gratis en tu cumpleaños</small>
-                                    )}
+                                <Alert variant="info" className="mt-2 mb-2 py-2">
+                                    <small><strong>Beneficio DUOC:</strong> Torta gratis en tu cumpleaños</small>
                                 </Alert>
                             )}
 

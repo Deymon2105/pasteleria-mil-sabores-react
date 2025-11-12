@@ -1,54 +1,48 @@
 import React, { createContext, useState, useContext, useEffect } from 'react'
 
-
 const CartContext = createContext()
 
-
 export function CartProvider({ children }){
-  // Función para obtener la clave del carrito del usuario actual
-  const getCartKey = () => {
-    try {
-      const currentUser = localStorage.getItem('currentUser');
-      if (currentUser) {
-        const user = JSON.parse(currentUser);
-        return `cart_${user.id || user.email}`; // Usar ID o email como identificador único
-      }
-      return 'cart_guest'; // Carrito para usuarios no autenticados
-    } catch {
-      return 'cart_guest';
-    }
-  };
-
+  // Carrito recuperado de sessionStorage
   const [cart, setCart] = useState(() => {
-    try{
-      const cartKey = getCartKey();
-      const raw = localStorage.getItem(cartKey);
-      return raw ? JSON.parse(raw) : []
-    }catch{ return [] }
+    try {
+      const savedCart = sessionStorage.getItem('cart')
+      return savedCart ? JSON.parse(savedCart) : []
+    } catch (error) {
+      console.error('Error al recuperar carrito:', error)
+      return []
+    }
   })
 
-  // Actualizar carrito cuando cambia la sesión del usuario
+  // Guardar carrito en sessionStorage cuando cambia
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('cart', JSON.stringify(cart))
+    } catch (error) {
+      console.error('Error al guardar carrito:', error)
+    }
+  }, [cart])
+
+  // Limpiar carrito cuando cambia la sesión del usuario
   useEffect(() => {
     const handleUserSessionChange = () => {
-      try {
-        const cartKey = getCartKey();
-        const raw = localStorage.getItem(cartKey);
-        setCart(raw ? JSON.parse(raw) : []);
-      } catch {
-        setCart([]);
-      }
-    };
+      setCart([])
+      sessionStorage.removeItem('cart')
+    }
 
-    window.addEventListener('userSessionChange', handleUserSessionChange);
-    return () => window.removeEventListener('userSessionChange', handleUserSessionChange);
-  }, []);
+    const handleUnauthorized = () => {
+      setCart([])
+      sessionStorage.removeItem('cart')
+    }
 
-  useEffect(()=>{
-    try{ 
-      const cartKey = getCartKey();
-      localStorage.setItem(cartKey, JSON.stringify(cart));
-    }catch{}
-  },[cart])
+    window.addEventListener('userSessionChange', handleUserSessionChange)
+    window.addEventListener('unauthorized', handleUnauthorized)
+    
+    return () => {
+      window.removeEventListener('userSessionChange', handleUserSessionChange)
+      window.removeEventListener('unauthorized', handleUnauthorized)
+    }
+  }, [])
 
 
   const addToCart = (product) => {

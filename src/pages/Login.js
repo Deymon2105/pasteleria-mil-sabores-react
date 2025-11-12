@@ -11,6 +11,9 @@ export default function Login() {
   const navigate = useNavigate();
   const { login, currentUser, isAdmin } = useAuth();
 
+  const fondoLogin = process.env.PUBLIC_URL + '/img/fondoLogin.png';
+  const logoPasteleria = process.env.PUBLIC_URL + '/img/logoPasteleria.png';
+
   useEffect(() => { 
     if (currentUser) {
       // Si ya hay sesión, redirigir según el rol
@@ -28,16 +31,13 @@ export default function Login() {
 
     try {
       const email = data.email.trim();
-      // La contraseña es opcional para usuarios de demo
       const password = data.password?.trim() || '';
 
-      const result = login(email, password);
+      const result = await login(email, password);
 
       if (!result.success) {
         throw new Error(result.error || 'Email o contraseña incorrectos');
       }
-
-      window.dispatchEvent(new Event('userSessionChange'));
       
       // Redirigir según el rol del usuario
       if (result.user.role === 'admin') {
@@ -53,81 +53,126 @@ export default function Login() {
   };
 
   return (
-    <Container className="login-container">
-      <Card className="login-card">
-        <Card.Body>
-          <h2 className="text-center mb-4">Iniciar Sesión</h2>
-          
-          {/* Banner de Demo */}
-          <Alert variant="info" className="mb-4">
-            <Alert.Heading className="h6">🎯 Demo - Acceso Rápido</Alert.Heading>
-            <hr />
-            <p className="mb-2"><strong>Panel Admin:</strong></p>
-            <ul className="mb-2">
-              <li><code>ana@duocuc.cl</code> (sin contraseña)</li>
-              <li><code>admin@example.com</code> (sin contraseña)</li>
-            </ul>
-            <p className="mb-2"><strong>Usuario Normal:</strong></p>
-            <ul className="mb-0">
-              <li><code>luis@example.com</code></li>
-              <li><code>maria@duocuc.cl</code></li>
-            </ul>
-            <hr className="my-2" />
-            <small className="text-muted">💡 Para demo: solo ingresa el email, la contraseña es opcional</small>
-          </Alert>
-          
-          {error && <Alert variant="danger">{error}</Alert>}
+    <div className="login-page" style={{
+      backgroundImage: `url(${fondoLogin})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }}>
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(255, 245, 225, 0.7)',
+        zIndex: 0
+      }}></div>
+      <Container className="login-container">
+        <Card className="login-card-modern">
+          <Card.Body className="login-card-body">
+            <div className="login-header">
+              <div className="login-icon">
+                <img src={logoPasteleria} alt="Logo Pastelería Mil Sabores" style={{width: '100px'}} />
+              </div>
+              <h2 className="login-title">Iniciar Sesión</h2>
+              <p className="login-subtitle">Bienvenido de vuelta a Mil Sabores</p>
+            </div>
+            
+            {error && (
+              <Alert variant="danger" className="login-alert">
+                <i className="bi bi-exclamation-circle me-2"></i>
+                {error}
+              </Alert>
+            )}
 
-          <Form onSubmit={handleSubmit(onSubmit)}>
-            <Form.Group className="mb-3" controlId="email">
-              <Form.Label>Email</Form.Label>
-              <Form.Control type="email" placeholder="*****@email.com"
-                {...register('email', {
-                  required: 'El email es requerido',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Email inválido'
-                  },
-                  setValueAs: (value) => value.trim()
-                })}
-                isInvalid={!!errors.email}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.email?.message}
-              </Form.Control.Feedback>
-            </Form.Group>
+            <Form onSubmit={handleSubmit(onSubmit)} className="login-form">
+              <Form.Group className="mb-3" controlId="email">
+                <Form.Label className="login-label">
+                  <i className="bi bi-envelope me-2"></i>
+                  Correo Electrónico
+                </Form.Label>
+                <Form.Control 
+                  type="email" 
+                  placeholder="tu@email.com"
+                  className="login-input"
+                  {...register('email', {
+                    required: 'El email es requerido',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Email inválido'
+                    },
+                    setValueAs: (value) => value.trim()
+                  })}
+                  isInvalid={!!errors.email}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {errors.email?.message}
+                </Form.Control.Feedback>
+              </Form.Group>
 
-            <Form.Group className="mb-3" controlId="password">
-              <Form.Label>Contraseña <small className="text-muted">(opcional para demo)</small></Form.Label>
-              <Form.Control
-                type="password"
-                placeholder="••••••••"
-                {...register('password', {
-                  required: false, // Ya no es obligatoria para demo
-                  minLength: {
-                    value: 6,
-                    message: 'Mínimo 6 caracteres'
-                  },
-                  setValueAs: (value) => value?.trim() || ''
-                })}
-                isInvalid={!!errors.password}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.password?.message}
-              </Form.Control.Feedback>
-            </Form.Group>
+              <Form.Group className="mb-4" controlId="password">
+                <Form.Label className="login-label">
+                  <i className="bi bi-lock me-2"></i>
+                  Contraseña
+                </Form.Label>
+                <Form.Control
+                  type="password"
+                  placeholder="••••••••"
+                  className="login-input"
+                  {...register('password', {
+                    required: 'La contraseña es requerida',
+                    minLength: {
+                      value: 6,
+                      message: 'Mínimo 6 caracteres'
+                    },
+                    setValueAs: (value) => value?.trim() || ''
+                  })}
+                  isInvalid={!!errors.password}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {errors.password?.message}
+                </Form.Control.Feedback>
+              </Form.Group>
 
-            <Button variant="primary" type="submit" className="w-100" disabled={loading}>
-              {loading ? 'Cargando...' : 'Iniciar Sesión'}
-            </Button>
-          </Form>
+              <Button type="submit" className="login-button w-100" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2"></span>
+                    Iniciando sesión...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-box-arrow-in-right me-2"></i>
+                    Iniciar Sesión
+                  </>
+                )}
+              </Button>
+            </Form>
 
-          <div className="text-center mt-3">
-            <p className="mb-0">¿No tienes cuenta?</p>
-            <Link to="/register" className="btn btn-link">Regístrate aquí</Link>
-          </div>
-        </Card.Body>
-      </Card>
-    </Container>
+            <div className="login-footer">
+              <p className="login-footer-text">
+                ¿No tienes cuenta?{' '}
+                <Link to="/register" className="login-link">
+                  Regístrate gratis
+                </Link>
+              </p>
+            </div>
+
+            {/* Usuarios de prueba */}
+            <div className="login-demo">
+              <p className="login-demo-title">
+                <i className="bi bi-info-circle me-1"></i>
+                Usuarios de prueba:
+              </p>
+              <div className="login-demo-credentials">
+                <code>ana@duocuc.cl / admin123</code>
+                <code>luis@example.com / 123456</code>
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
+      </Container>
+    </div>
   );
 }

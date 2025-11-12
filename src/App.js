@@ -24,33 +24,35 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<Home/>} />
-            <Route path="/catalogo" element={<Catalogo/>} />
-            <Route path="/blogs" element={<Blogs/>} />
-            <Route path="/about" element={<About/>} />
-            <Route path="/contacto" element={<Contacto/>} />
-            <Route path="/login" element={<Login/>} />
-            <Route path="/register" element={<Register/>}/>
-            <Route path="/cart" element={<Cart/>} />
-            <Route path="/compra" element={<Compra/>} />
-            
-            {/*rutas de admin protegidas */}
-            <Route path="/admin" element={
-              <ProtectedRoute requireAdmin={true}>
-                <AdminLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Dashboard />} />
-              <Route path="orders" element={<OrdersAdmin />} />
-              <Route path="products" element={<ProductsAdmin />} />
-              <Route path="users" element={<UsersAdmin />} />
-            </Route>
-          </Routes>
-        </main>
-        <Footer />
+        <div className="app-container">
+          <Header />
+          <main className="main-content">
+            <Routes>
+              <Route path="/" element={<Home/>} />
+              <Route path="/catalogo" element={<Catalogo/>} />
+              <Route path="/blogs" element={<Blogs/>} />
+              <Route path="/about" element={<About/>} />
+              <Route path="/contacto" element={<Contacto/>} />
+              <Route path="/login" element={<Login/>} />
+              <Route path="/register" element={<Register/>}/>
+              <Route path="/cart" element={<Cart/>} />
+              <Route path="/compra" element={<Compra/>} />
+              
+              {/*rutas de admin protegidas */}
+              <Route path="/admin" element={
+                <ProtectedRoute requireAdmin={true}>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }>
+                <Route index element={<Dashboard />} />
+                <Route path="orders" element={<OrdersAdmin />} />
+                <Route path="products" element={<ProductsAdmin />} />
+                <Route path="users" element={<UsersAdmin />} />
+              </Route>
+            </Routes>
+          </main>
+          <Footer />
+        </div>
       </CartProvider>
     </AuthProvider>
   );

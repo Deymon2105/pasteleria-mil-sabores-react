@@ -19,7 +19,7 @@ export default function ModalProducto({ producto, onClose }) {
           <div className="col-md-6">
             <div className="modal-producto__image-container">
               <Image
-                src={producto.image}
+                src={process.env.PUBLIC_URL + producto.image}
                 alt={producto.title}
                 fluid
                 rounded

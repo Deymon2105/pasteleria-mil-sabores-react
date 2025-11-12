@@ -1,16 +1,37 @@
-import React, { useState } from 'react'
-import { Container, Row, Col, Form, Alert } from 'react-bootstrap'
-import products from '../data/products'
+import React, { useState, useEffect } from 'react'
+import { Container, Row, Col, Form, Alert, Spinner } from 'react-bootstrap'
+import { productService } from '../service/api'
 import ProductCard from '../components/ProductCard'
 import ModalProducto from '../components/ModalProducto'
 
 export default function Catalogo() {
-
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('Todos') //estado categorias seleccionadas
   const [searchTerm, setSearchTerm] = useState('') //estado texto de busqueda
 
   // --- NUEVOS ESTADOS PARA EL MODAL ---
   const [productoSeleccionado, setProductoSeleccionado] = useState(null)
+
+  // Cargar productos desde la API al montar el componente
+  useEffect(() => {
+    loadProducts()
+  }, [])
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await productService.getAll()
+      setProducts(response.data)
+    } catch (err) {
+      console.error('Error al cargar productos:', err)
+      setError('Error al cargar los productos. Por favor, intenta de nuevo.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleVerDetalles = (producto) => {
     setProductoSeleccionado(producto)
@@ -20,17 +41,37 @@ export default function Catalogo() {
     setProductoSeleccionado(null)
   }
 
-  const categories = ['Todos', 'Tortas Cuadradas', 'Tortas Circulares', 
-                      'Postres Individuales', 'Productos Sin Azúcar', 'Pastelería Tradicional', 
-                      'Productos Sin Gluten', 'Productos Vegana', 'Tortas Especiales']
+  // Extraer categorías dinámicamente desde los productos
+  const categories = ['Todos', ...new Set(products.map(p => p.category))]
 
-  //Funcion para el filtro
   const filteredProducts = products.filter(product => {
     const matchCategory = selectedCategory === 'Todos' || product.category === selectedCategory //filtro categoría
     const matchSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                         product.desc.toLowerCase().includes(searchTerm.toLowerCase()) //filtro texto
     return matchCategory && matchSearch
   })
+
+  if (loading) {
+    return (
+      <Container className="my-5 text-center">
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Cargando productos...</span>
+        </Spinner>
+        <p className="mt-3">Cargando productos...</p>
+      </Container>
+    )
+  }
+
+  if (error) {
+    return (
+      <Container className="my-5">
+        <Alert variant="danger">
+          <p>{error}</p>
+          <button className="btn btn-link" onClick={loadProducts}>Reintentar</button>
+        </Alert>
+      </Container>
+    )
+  }
 
   return (
     <Container className="my-5">
