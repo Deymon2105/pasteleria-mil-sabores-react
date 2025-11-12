@@ -1,31 +1,53 @@
 import { useState, useEffect, useCallback } from 'react'
-import { orders as seedOrders, users as seedUsers } from '../data/adminData'
+import { orderService, userService } from '../service/api'
 
 export default function useAdminData(){
-  const [orders, setOrders] = useState(()=>{
-    try{ 
-      const ls = localStorage.getItem('orders');
-      return ls ? JSON.parse(ls) : seedOrders;
-    }catch{return seedOrders}
-  })
-  
-  // eslint-disable-next-line no-unused-vars
-  const [users, setUsers] = useState(()=>{
-    try{ 
-      const ls = localStorage.getItem('users');
-      return ls ? JSON.parse(ls) : seedUsers;
-    }catch{return seedUsers}
-  })
+  const [orders, setOrders] = useState([])
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-
-  useEffect(()=>{ try{ localStorage.setItem('orders', JSON.stringify(orders)); }catch{} }, [orders])
-  useEffect(()=>{ try{ localStorage.setItem('users', JSON.stringify(users)); }catch{} }, [users])
-
-
-  const updateOrderStatus = useCallback((code, status) => {
-    setOrders(prev => prev.map(o => o.code===code ? {...o, status} : o))
+  // Cargar datos al montar
+  useEffect(() => {
+    loadData()
   }, [])
 
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const [ordersResponse, usersResponse] = await Promise.all([
+        orderService.getAll(),
+        userService.getAll()
+      ])
+      
+      setOrders(ordersResponse.data)
+      setUsers(usersResponse.data)
+    } catch (err) {
+      console.error('Error al cargar datos admin:', err)
+      setError('Error al cargar datos del panel de administración')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  return { orders, users, updateOrderStatus }
+  const updateOrderStatus = useCallback(async (code, status) => {
+    try {
+      // Encontrar el pedido por código
+      const order = orders.find(o => o.code === code)
+      if (!order) return
+
+      // Actualizar en el servidor
+      await orderService.updateStatus(order.id, status)
+      
+      // Actualizar localmente
+      setOrders(prev => prev.map(o => o.code === code ? {...o, status} : o))
+    } catch (err) {
+      console.error('Error al actualizar estado del pedido:', err)
+      throw err
+    }
+  }, [orders])
+
+  return { orders, users, updateOrderStatus, loading, error, loadData }
 }
