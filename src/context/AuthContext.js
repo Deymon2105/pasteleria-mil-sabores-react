@@ -1,54 +1,73 @@
 import React, { createContext, useState, useContext, useEffect } from 'react'
-import { userService, setAuthToken, clearAuthToken } from '../service/api'
+import { authService, userService } from '../service/api'
+import { supabase } from '../config/supabaseClient'
 
 const AuthContext = createContext()
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(() => {
-    // Recuperar usuario de sessionStorage al iniciar
-    try {
-      const savedUser = sessionStorage.getItem('currentUser')
-      const savedToken = sessionStorage.getItem('authToken')
-      if (savedUser && savedToken) {
-        setAuthToken(savedToken)
-        return JSON.parse(savedUser)
-      }
-    } catch (error) {
-      console.error('Error al recuperar sesión:', error)
-    }
-    return null
-  })
+  const [currentUser, setCurrentUser] = useState(null)
   const [allUsers, setAllUsers] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [session, setSession] = useState(null)
 
-  // Guardar usuario en sessionStorage cuando cambia
+  // Inicializar sesión y escuchar cambios de autenticación
   useEffect(() => {
-    if (currentUser) {
+    // Obtener sesión inicial
+    const initializeAuth = async () => {
       try {
-        sessionStorage.setItem('currentUser', JSON.stringify(currentUser))
+        const { data: { session } } = await supabase.auth.getSession()
+        setSession(session)
+        
+        if (session) {
+          // Cargar datos completos del usuario
+          const user = await authService.getCurrentUser()
+          setCurrentUser(user)
+        }
       } catch (error) {
-        console.error('Error al guardar sesión:', error)
+        console.error('Error al inicializar autenticación:', error)
+      } finally {
+        setLoading(false)
       }
-    } else {
-      sessionStorage.removeItem('currentUser')
-      sessionStorage.removeItem('authToken')
+    }
+
+    initializeAuth()
+
+    // Escuchar cambios en la autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setSession(session)
+      
+      if (session) {
+        try {
+          const user = await authService.getCurrentUser()
+          setCurrentUser(user)
+        } catch (error) {
+          console.error('Error al obtener usuario:', error)
+          setCurrentUser(null)
+        }
+      } else {
+        setCurrentUser(null)
+      }
+
+      // Disparar evento personalizado para compatibilidad
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        window.dispatchEvent(new Event('userSessionChange'))
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        window.dispatchEvent(new Event('userSessionChange'))
+      }
+    })
+
+    // Cleanup
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  // Cargar usuarios desde la API al iniciar (solo admin)
+  useEffect(() => {
+    if (currentUser?.role === 'admin') {
+      loadUsers()
     }
   }, [currentUser])
-
-  // Cargar usuarios desde la API al iniciar
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
-  // Escuchar evento de sesión no autorizada
-  useEffect(() => {
-    const handleUnauthorized = () => {
-      setCurrentUser(null)
-      clearAuthToken()
-    }
-    window.addEventListener('unauthorized', handleUnauthorized)
-    return () => window.removeEventListener('unauthorized', handleUnauthorized)
-  }, [])
 
   const loadUsers = async () => {
     try {
@@ -63,14 +82,11 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setLoading(true)
     try {
-      const response = await userService.login({ email, password })
-      const { user, token } = response.data
+      const response = await authService.login(email, password)
+      const { user, session } = response.data
       
       setCurrentUser(user)
-      setAuthToken(token)
-      
-      // Guardar token en sessionStorage
-      sessionStorage.setItem('authToken', token)
+      setSession(session)
       
       window.dispatchEvent(new Event('userSessionChange'))
       
@@ -79,35 +95,37 @@ export function AuthProvider({ children }) {
       console.error('Error en login:', error)
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Usuario o contraseña incorrectos' 
+        error: error.message || 'Usuario o contraseña incorrectos' 
       }
     } finally {
       setLoading(false)
     }
   }
 
-  const logout = () => {
-    setCurrentUser(null)
-    clearAuthToken()
-    sessionStorage.removeItem('currentUser')
-    sessionStorage.removeItem('authToken')
-    window.dispatchEvent(new Event('userSessionChange'))
+  const logout = async () => {
+    try {
+      await authService.logout()
+      setCurrentUser(null)
+      setSession(null)
+      window.dispatchEvent(new Event('userSessionChange'))
+    } catch (error) {
+      console.error('Error en logout:', error)
+    }
   }
 
   const register = async (userData) => {
     setLoading(true)
     try {
-      const response = await userService.register(userData)
-      const { user, token } = response.data
+      const response = await authService.register(userData)
+      const { user, session } = response.data
       
       setCurrentUser(user)
-      setAuthToken(token)
+      setSession(session)
       
-      // Guardar token en sessionStorage
-      sessionStorage.setItem('authToken', token)
-      
-      // Actualizar lista de usuarios
-      await loadUsers()
+      // Actualizar lista de usuarios si es admin
+      if (user.role === 'admin') {
+        await loadUsers()
+      }
       
       window.dispatchEvent(new Event('userSessionChange'))
       return { success: true, user }
@@ -115,7 +133,7 @@ export function AuthProvider({ children }) {
       console.error('Error en registro:', error)
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Error al registrar usuario' 
+        error: error.message || 'Error al registrar usuario' 
       }
     } finally {
       setLoading(false)
@@ -127,12 +145,13 @@ export function AuthProvider({ children }) {
   }
 
   const isLoggedIn = () => {
-    return currentUser !== null
+    return currentUser !== null && session !== null
   }
 
   return (
     <AuthContext.Provider value={{
       currentUser,
+      session,
       allUsers,
       login,
       logout,

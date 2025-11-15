@@ -1,19 +1,21 @@
 import React from 'react'
 import useAdminData from './useAdminData'
+import { ORDER_STATUS_MAP } from '../service/api'
 
 export default function Dashboard(){
   const { orders, users } = useAdminData()
   
   // Métricas
   const totalSales = orders.reduce((a,o)=> a + (Number(o.total)||0), 0)
-  const activeOrders = orders.filter(o=>o.status!=='Entregado').length
-  const completedOrders = orders.filter(o=>o.status==='Entregado').length
+  const activeOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').length
+  const completedOrders = orders.filter(o => o.status === 'delivered').length
   
   // Pedidos de hoy
   const today = new Date().toDateString()
   const todayOrders = orders.filter(o => {
-    const orderDate = new Date(o.date).toDateString()
-    return orderDate === today
+    const orderDate = new Date(o.date || o.created_at)
+    if (Number.isNaN(orderDate.getTime())) return false
+    return orderDate.toDateString() === today
   })
   const todaySales = todayOrders.reduce((a,o)=> a + (Number(o.total)||0), 0)
   
@@ -67,19 +69,23 @@ export default function Dashboard(){
               {orders.slice(0, 5).map((order, idx) => (
                 <tr key={order.code || idx} style={{borderBottom:'1px solid #dee2e6'}}>
                   <td style={{padding:'10px'}}><strong>{order.code}</strong></td>
-                  <td style={{padding:'10px'}}>{order.customerName || order.name || 'N/A'}</td>
+                  <td style={{padding:'10px'}}>{order.customerName || order.name || order.user?.name || 'N/A'}</td>
                   <td style={{padding:'10px'}}>{Number(order.total).toLocaleString('es-CL',{style:'currency',currency:'CLP'})}</td>
                   <td style={{padding:'10px'}}>
-                    <span style={{
-                      padding:'3px 8px',
-                      borderRadius:'3px',
-                      background: order.status === 'Entregado' ? '#28a745' : 
-                                 order.status === 'En camino' ? '#17a2b8' : '#ffc107',
-                      color:'white',
-                      fontSize:'0.85em'
-                    }}>
-                      {order.status}
-                    </span>
+                    {(() => {
+                      const statusMeta = ORDER_STATUS_MAP[order.status] || { label: order.status, badgeColor: '#6c757d' }
+                      return (
+                        <span style={{
+                          padding:'3px 8px',
+                          borderRadius:'3px',
+                          background: statusMeta.badgeColor,
+                          color:'white',
+                          fontSize:'0.85em'
+                        }}>
+                          {order.statusLabel || statusMeta.label}
+                        </span>
+                      )
+                    })()}
                   </td>
                 </tr>
               ))}

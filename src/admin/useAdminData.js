@@ -22,8 +22,8 @@ export default function useAdminData(){
         userService.getAll()
       ])
       
-      setOrders(ordersResponse.data)
-      setUsers(usersResponse.data)
+      setOrders(ordersResponse.data || [])
+      setUsers(usersResponse.data || [])
     } catch (err) {
       console.error('Error al cargar datos admin:', err)
       setError('Error al cargar datos del panel de administración')
@@ -36,13 +36,20 @@ export default function useAdminData(){
     try {
       // Encontrar el pedido por código
       const order = orders.find(o => o.code === code)
-      if (!order) return
+      if (!order) {
+        console.error('Pedido no encontrado con código:', code)
+        return
+      }
 
-      // Actualizar en el servidor
-      await orderService.updateStatus(order.id, status)
-      
-      // Actualizar localmente
-      setOrders(prev => prev.map(o => o.code === code ? {...o, status} : o))
+      // Actualizar en el servidor usando el ID del pedido
+      const { data: updatedOrder } = await orderService.updateStatus(order.id, status)
+      if (!updatedOrder) {
+        console.warn('No se pudo obtener el pedido actualizado desde Supabase')
+        return
+      }
+
+      // Actualizar localmente con la respuesta transformada
+      setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o))
     } catch (err) {
       console.error('Error al actualizar estado del pedido:', err)
       throw err

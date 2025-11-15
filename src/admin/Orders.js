@@ -1,10 +1,13 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import useAdminData from './useAdminData'
+import { ORDER_STATUS_MAP } from '../service/api'
 
 export default function Orders(){
   const { orders, updateOrderStatus, loading, error } = useAdminData()
   const [expandedOrder, setExpandedOrder] = useState(null)
   const [updating, setUpdating] = useState(false)
+
+  const statusOptions = useMemo(() => Object.entries(ORDER_STATUS_MAP), [])
 
   const handleChange = async (code, e) => {
     try {
@@ -61,11 +64,14 @@ export default function Orders(){
             <div className="card" key={o.code}>
               <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                 <div>
-                  <strong>{o.code}</strong> — {o.status} — Total: {o.total.toLocaleString('es-CL',{style:'currency',currency:'CLP'})}
+                  <strong>{o.code}</strong> — {o.statusLabel || ORDER_STATUS_MAP[o.status]?.label || o.status} — Total: {Number(o.total).toLocaleString('es-CL',{style:'currency',currency:'CLP'})}
                   <br />
-                  <small>Cliente: {o.customerName || o.name || 'N/A'}</small>
+                  <small>Cliente: {o.customerName || o.name || o.user?.name || 'N/A'}</small>
                   {' | '}
-                  <small>Fecha: {new Date(o.date).toLocaleDateString('es-CL')}</small>
+                  <small>Fecha: {(() => {
+                    const date = new Date(o.date || o.created_at)
+                    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('es-CL')
+                  })()}</small>
                 </div>
                 <button className="btn" onClick={() => toggleExpand(o.code)}>
                   {expandedOrder === o.code ? 'Ocultar detalles' : 'Ver detalles'}
@@ -87,13 +93,13 @@ export default function Orders(){
                     <tbody>
                       {o.items.map((item, idx) => (
                         <tr key={idx} style={{borderBottom: '1px solid #dee2e6'}}>
-                          <td style={{padding: '8px'}}>{item.name || item.title}</td>
+                          <td style={{padding: '8px'}}>{item.name || item.title || item.product?.name || 'Producto'}</td>
                           <td style={{padding: '8px', textAlign: 'center'}}>{item.quantity}</td>
                           <td style={{padding: '8px', textAlign: 'right'}}>
                             {Number(item.price).toLocaleString('es-CL',{style:'currency',currency:'CLP'})}
                           </td>
                           <td style={{padding: '8px', textAlign: 'right'}}>
-                            {(item.quantity * item.price).toLocaleString('es-CL',{style:'currency',currency:'CLP'})}
+                            {(Number(item.quantity) * Number(item.price)).toLocaleString('es-CL',{style:'currency',currency:'CLP'})}
                           </td>
                         </tr>
                       ))}
@@ -105,9 +111,9 @@ export default function Orders(){
               <div className="form__field" style={{marginTop: '10px'}}>
                 <label>Actualizar estado</label>
                 <select data-code={o.code} className="form__input js-status" onChange={(e)=>handleChange(o.code,e)} value={o.status}>
-                  <option value="Preparación">Preparación</option>
-                  <option value="En camino">En camino</option>
-                  <option value="Entregado">Entregado</option>
+                  {statusOptions.map(([value, meta]) => (
+                    <option key={value} value={value}>{meta.label}</option>
+                  ))}
                 </select>
               </div>
             </div>

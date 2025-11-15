@@ -126,33 +126,40 @@ export default function Compra() {
 
         if (pagoExitoso) {
             try {
-                // Crear objeto de pedido para enviar al backend
-                const orderData = {
-                    code: `ORD-${Date.now()}`,
-                    customerName: datosFormulario.nombre,
-                    email: datosFormulario.correo,
-                    date: new Date().toISOString(),
-                    status: 'Pendiente',
-                    total: total,
-                    items: carritoInicial.map(item => ({
-                        productId: item.id,
-                        productTitle: item.title,
-                        quantity: item.qty || 1,
-                        price: item.price
-                    })),
-                    address: {
-                        calle: datosFormulario.calle,
-                        depto: datosFormulario.depto,
-                        region: datosFormulario.region,
-                        comuna: datosFormulario.comuna,
-                        indicaciones: datosFormulario.mensaje
-                    },
-                    subtotal: subtotal,
-                    discounts: detallesDescuento,
-                    totalDiscount: montoDescuento
+                // Preparar información de envío
+                const shippingAddress = {
+                    nombre: datosFormulario.nombre,
+                    calle: datosFormulario.calle,
+                    depto: datosFormulario.depto,
+                    region: datosFormulario.region,
+                    comuna: datosFormulario.comuna,
+                    indicaciones: datosFormulario.mensaje
                 };
 
-                // Enviar al backend
+                // Preparar información de pago (sin datos sensibles)
+                const paymentInfo = {
+                    method: 'credit_card',
+                    lastFourDigits: datosFormulario.numeroTarjeta.slice(-4),
+                    cardHolderName: datosFormulario.nombreTarjeta
+                };
+
+                // Crear objeto de pedido compatible con Supabase
+                const orderData = {
+                    code: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                    status: 'pending',
+                    total: total,
+                    discount: montoDescuento,
+                    shippingAddress: shippingAddress,
+                    paymentInfo: paymentInfo,
+                    notes: datosFormulario.mensaje,
+                    items: carritoInicial.map(item => ({
+                        productId: item.id,
+                        quantity: item.qty || 1,
+                        price: item.price
+                    }))
+                };
+
+                // Enviar al backend (Supabase)
                 await orderService.create(orderData);
 
                 clearCart();

@@ -82,11 +82,8 @@ export default function Register() {
         name,
         email,
         password,
-        role: 'user',
-        birthdate: data.birthDate,
-        benefits: benefits,
-        age: submittedAge,
-        createdAt: new Date().toISOString()
+        phone: data.phone || '', // Agregar teléfono si existe
+        benefits: benefits, // Array de beneficios
       };
 
       // Registrar usuario usando AuthContext (ahora es async)
