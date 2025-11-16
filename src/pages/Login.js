@@ -73,7 +73,7 @@ export default function Login() {
           <Card.Body className="login-card-body">
             <div className="login-header">
               <div className="login-icon">
-                <img src={logoPasteleria} alt="Logo Pastelería Mil Sabores" style={{width: '100px'}} />
+                <img src={logoPasteleria} alt="Logo Pastelería Mil Sabores" style={{width: '500px'}} />
               </div>
               <h2 className="login-title">Iniciar Sesión</h2>
               <p className="login-subtitle">Bienvenido de vuelta a Mil Sabores</p>
