@@ -409,6 +409,11 @@
   filter: drop-shadow(0 4px 8px rgba(139, 69, 19, 0.15));
 }
 
+/* Remove shadow specifically for the logo image */
+.login-icon img[src$="logoPasteleria.png"] {
+  filter: none;
+}
+
 .login-title {
   font-family: var(--font-heading);
   color: var(--accent-choc);
