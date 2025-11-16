@@ -1,44 +1,52 @@
 ﻿import React, { useState, useEffect } from 'react'
-import productsData from '../data/products'
+import { productService } from '../service/api'
 
 export default function Products(){
   const [products, setProducts] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [filter, setFilter] = useState('all')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const stored = localStorage.getItem('products')
-    if (stored) {
-      try {
-        setProducts(JSON.parse(stored))
-      } catch {
-        setProducts(productsData)
-        localStorage.setItem('products', JSON.stringify(productsData))
-      }
-    } else {
-      setProducts(productsData)
-      localStorage.setItem('products', JSON.stringify(productsData))
-    }
+    loadProducts()
   }, [])
 
-  useEffect(() => {
-    if (products.length > 0) {
-      localStorage.setItem('products', JSON.stringify(products))
+  const loadProducts = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await productService.getAll()
+      setProducts(response.data)
+    } catch (err) {
+      console.error('Error al cargar productos:', err)
+      setError('Error al cargar productos')
+    } finally {
+      setLoading(false)
     }
-  }, [products])
+  }
 
   const handleEdit = (product) => {
     setEditingId(product.id)
     setEditForm(product)
   }
 
-  const handleSave = () => {
-    setProducts(prev => prev.map(p => 
-      p.id === editingId ? { ...editForm, price: Number(editForm.price) } : p
-    ))
-    setEditingId(null)
-    setEditForm({})
+  const handleSave = async () => {
+    try {
+      setLoading(true)
+      const updatedProduct = { ...editForm, price: Number(editForm.price) }
+      await productService.update(editingId, updatedProduct)
+      await loadProducts() // Recargar la lista actualizada
+      setEditingId(null)
+      setEditForm({})
+      alert('Producto actualizado exitosamente')
+    } catch (err) {
+      console.error('Error al actualizar producto:', err)
+      alert('Error al actualizar el producto')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCancel = () => {
@@ -46,24 +54,67 @@ export default function Products(){
     setEditForm({})
   }
 
-  const handleDelete = (productId) => {
+  const handleDelete = async (productId) => {
     if (window.confirm('¿Estás seguro de eliminar este producto?')) {
-      setProducts(prev => prev.filter(p => p.id !== productId))
+      try {
+        setLoading(true)
+        await productService.delete(productId)
+        await loadProducts() // Recargar la lista actualizada
+        alert('Producto eliminado exitosamente')
+      } catch (err) {
+        console.error('Error al eliminar producto:', err)
+        alert('Error al eliminar el producto')
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
-  const handleToggleFeatured = (productId) => {
-    setProducts(prev => prev.map(p => 
-      p.id === productId ? { ...p, featured: !p.featured } : p
-    ))
+  const handleToggleFeatured = async (productId) => {
+    try {
+      const product = products.find(p => p.id === productId)
+      if (product) {
+        const updatedProduct = { ...product, featured: !product.featured }
+        await productService.update(productId, updatedProduct)
+        await loadProducts() // Recargar la lista actualizada
+      }
+    } catch (err) {
+      console.error('Error al actualizar destacado:', err)
+      alert('Error al actualizar el producto')
+    }
   }
 
   const categories = [...new Set(products.map(p => p.category))]
   const filteredProducts = filter === 'all' ? products : products.filter(p => p.category === filter)
 
+  if (loading && products.length === 0) {
+    return (
+      <div style={{textAlign: 'center', padding: '50px'}}>
+        <div className="spinner-border" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+        <p>Cargando productos...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{padding: '20px'}}>
+        <div className="alert alert-danger">{error}</div>
+        <button className="btn" onClick={loadProducts}>Reintentar</button>
+      </div>
+    )
+  }
+
   return (
     <div>
       <h1 className="page__title">Productos</h1>
+      {loading && (
+        <div style={{position: 'fixed', top: '10px', right: '10px', background: '#007bff', color: 'white', padding: '10px', borderRadius: '5px', zIndex: 9999}}>
+          Guardando cambios...
+        </div>
+      )}
       
       <div style={{marginBottom: '15px', padding:'15px', background:'#f8f9fa', borderRadius:'5px'}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>

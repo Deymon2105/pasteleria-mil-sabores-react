@@ -1,17 +1,36 @@
 import React, { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
+import useAdminData from './useAdminData'
 
 export default function Users(){
-  const { allUsers } = useAuth()
+  const { users, loading, error } = useAdminData()
   const [filterRole, setFilterRole] = useState('all')
 
   const filteredUsers = filterRole === 'all' 
-    ? allUsers 
-    : allUsers.filter(u => u.role === filterRole)
+    ? users 
+    : users.filter(u => u.role === filterRole)
+
+  if (loading) {
+    return (
+      <div style={{textAlign: 'center', padding: '50px'}}>
+        <div className="spinner-border" role="status">
+          <span className="visually-hidden">Cargando...</span>
+        </div>
+        <p>Cargando usuarios...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{padding: '20px'}}>
+        <div className="alert alert-danger">{error}</div>
+      </div>
+    )
+  }
 
   return (
     <div>
-      <h1 className="page__title">Usuarios</h1>
+      <h1 className="page__title">Usuarios ({users.length})</h1>
       
       {/* Filtros simples */}
       <div style={{marginBottom: '20px'}}>
@@ -21,21 +40,21 @@ export default function Users(){
           onClick={() => setFilterRole('all')}
           style={{marginRight: '5px', background: filterRole === 'all' ? '#007bff' : '#6c757d'}}
         >
-          Todos ({allUsers.length})
+          Todos ({users.length})
         </button>
         <button 
           className="btn" 
           onClick={() => setFilterRole('admin')}
           style={{marginRight: '5px', background: filterRole === 'admin' ? '#dc3545' : '#6c757d'}}
         >
-          Admins ({allUsers.filter(u => u.role === 'admin').length})
+          Admins ({users.filter(u => u.role === 'admin').length})
         </button>
         <button 
           className="btn" 
           onClick={() => setFilterRole('user')}
           style={{background: filterRole === 'user' ? '#28a745' : '#6c757d'}}
         >
-          Usuarios ({allUsers.filter(u => u.role === 'user').length})
+          Usuarios ({users.filter(u => u.role === 'user').length})
         </button>
       </div>
 

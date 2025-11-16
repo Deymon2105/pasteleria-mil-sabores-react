@@ -12,6 +12,9 @@ export default function Register() {
   const navigate = useNavigate();
   const { currentUser, allUsers, register: registerUser } = useAuth();
 
+  const fondoLogin = process.env.PUBLIC_URL + '/img/fondoLogin.png';
+  const logoPasteleria = process.env.PUBLIC_URL + '/img/logoPasteleria.png';
+
   //redirigir si ya hay sesión activa
   useEffect(() => {
     if (currentUser) {
@@ -56,11 +59,6 @@ export default function Register() {
       const name = data.name.trim();
       const password = data.password.trim();
 
-      // Verificar si el usuario ya existe
-      if (allUsers.some(u => u.email === email)) {
-        throw new Error('Este email ya está registrado');
-      }
-
       // Calcular edad
       const submittedAge = calculateAge(data.birthDate);
       
@@ -83,16 +81,13 @@ export default function Register() {
       const newUser = {
         name,
         email,
-        password, // Guardamos la contraseña
-        role: 'user', // Los nuevos usuarios son usuarios normales
-        birthdate: data.birthDate,
-        benefits: benefits,
-        age: submittedAge,
-        createdAt: new Date().toISOString()
+        password,
+        phone: data.phone || '', // Agregar teléfono si existe
+        benefits: benefits, // Array de beneficios
       };
 
-      // Registrar usuario usando AuthContext
-      const result = registerUser(newUser);
+      // Registrar usuario usando AuthContext (ahora es async)
+      const result = await registerUser(newUser);
       
       if (!result.success) {
         throw new Error(result.error || 'Error al registrar usuario');
@@ -126,85 +121,129 @@ export default function Register() {
   };
 
   return (
-    <Container className="register-container">
-      <Card className="register-card">
-        <Card.Body>
-          <h2 className="text-center mb-4">Registro de Usuario</h2>
-          {error && <Alert variant="danger">{error}</Alert>}
-          {/* se muestran beneficios en tiempo real */}
-          {(hasSeniorDiscount || hasPromoDiscount || isDuocStudent) && (
-            <Alert variant="success" className="benefits-alert">
-              <h6 className="mb-2">🎉 Beneficios activados:</h6>
-              {hasSeniorDiscount && (
-                <Badge bg="success" className="me-2 mb-1">50% descuento senior</Badge>
-              )}
-              {hasPromoDiscount && (
-                <Badge bg="info" className="me-2 mb-1">10% descuento FELICES50</Badge>
-              )}
-              {isDuocStudent && (
-                <Badge bg="warning" text="dark" className="mb-1">🎂 Torta gratis</Badge>
-              )}
-            </Alert>
-          )}
+    <div className="register-page" style={{
+      backgroundImage: `url(${fondoLogin})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }}>
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(255, 245, 225, 0.7)',
+        zIndex: 0
+      }}></div>
+      <Container className="register-container">
+        <Card className="register-card-modern">
+          <Card.Body className="register-card-body">
+            <div className="register-header">
+              <div className="register-icon">
+                <img src={logoPasteleria} alt="Logo Pastelería Mil Sabores" style={{width: '100px'}} />
+              </div>
+              <h2 className="register-title">Crear Cuenta</h2>
+              <p className="register-subtitle">Únete a la familia Mil Sabores</p>
+            </div>
 
-          {/*mensajes de beneficios aplicados */}
-          {benefitMessages.length > 0 && (
-            <Alert variant="success" onClose={() => setBenefitMessages([])} dismissible>
-              <h6 className="mb-2">🎉 Beneficios obtenidos:</h6>
-              <ul className="mb-0">
-                {benefitMessages.map((m, i) => <li key={i}>{m}</li>)}
-              </ul>
-            </Alert>
-          )}
-          {/*apartado del nombre*/}
-          <Form onSubmit={handleSubmit(onSubmit)}>
-            <Form.Group className="mb-3" controlId="name">
-              <Form.Label>Nombre completo</Form.Label>
-              <Form.Control type="text" placeholder="Juan Pérez"
-                {...register('name', {
-                  required: 'El nombre es obligatorio',
-                  minLength: {
-                    value: 3,
-                    message: 'Mínimo 3 caracteres'
-                  },
-                  setValueAs: (value) => value.trim()
-                })}
-                isInvalid={!!errors.name}
-              />
-              <Form.Control.Feedback type="invalid">
-                {errors.name?.message}
-              </Form.Control.Feedback>
-            </Form.Group>
-            {/*apartado del email*/}
-            <Form.Group className="mb-3" controlId="email">
-              <Form.Label>Email</Form.Label>
-              <Form.Control type="email" placeholder="tu@email.com o estudiante@duocuc.cl"
-                {...register('email', {
-                  required: 'El email es obligatorio',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Email inválido'
-                  },
-                  setValueAs: (value) => value.trim()
-                })}
-                isInvalid={!!errors.email}
-              />
-              {isDuocStudent && (
-                <Form.Text className="text-success">
-                  ✓ Email institucional Duoc detectado
+            {error && (
+              <Alert variant="danger" className="register-alert">
+                <i className="bi bi-exclamation-circle me-2"></i>
+                {error}
+              </Alert>
+            )}
+
+            {/* se muestran beneficios en tiempo real */}
+            {(hasSeniorDiscount || hasPromoDiscount || isDuocStudent) && (
+              <Alert variant="success" className="benefits-alert">
+                <h6 className="mb-2">🎉 Beneficios activados:</h6>
+                {hasSeniorDiscount && (
+                  <Badge bg="success" className="me-2 mb-1">50% descuento senior</Badge>
+                )}
+                {hasPromoDiscount && (
+                  <Badge bg="info" className="me-2 mb-1">10% descuento FELICES50</Badge>
+                )}
+                {isDuocStudent && (
+                  <Badge bg="warning" text="dark" className="mb-1">🎂 Torta gratis</Badge>
+                )}
+              </Alert>
+            )}
+
+            {/*mensajes de beneficios aplicados */}
+            {benefitMessages.length > 0 && (
+              <Alert variant="success" onClose={() => setBenefitMessages([])} dismissible>
+                <h6 className="mb-2">🎉 Beneficios obtenidos:</h6>
+                <ul className="mb-0">
+                  {benefitMessages.map((m, i) => <li key={i}>{m}</li>)}
+                </ul>
+              </Alert>
+            )}
+
+            <Form onSubmit={handleSubmit(onSubmit)} className="register-form">
+              <Form.Group className="mb-3" controlId="name">
+                <Form.Label className="register-label">
+                  <i className="bi bi-person me-2"></i>
+                  Nombre completo
+                </Form.Label>
+                <Form.Control 
+                  type="text" 
+                  placeholder="Juan Pérez"
+                  className="register-input"
+                  {...register('name', {
+                    required: 'El nombre es obligatorio',
+                    minLength: {
+                      value: 3,
+                      message: 'Mínimo 3 caracteres'
+                    },
+                    setValueAs: (value) => value.trim()
+                  })}
+                  isInvalid={!!errors.name}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {errors.name?.message}
+                </Form.Control.Feedback>
+              </Form.Group>
+
+              <Form.Group className="mb-3" controlId="email">
+                <Form.Label className="register-label">
+                  <i className="bi bi-envelope me-2"></i>
+                  Email
+                </Form.Label>
+                <Form.Control 
+                  type="email" 
+                  placeholder="tu@email.com o estudiante@duocuc.cl"
+                  className="register-input"
+                  {...register('email', {
+                    required: 'El email es obligatorio',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Email inválido'
+                    },
+                    setValueAs: (value) => value.trim()
+                  })}
+                  isInvalid={!!errors.email}
+                />
+                {isDuocStudent && (
+                  <Form.Text className="text-success">
+                    ✓ Email institucional Duoc detectado
                 </Form.Text>
               )}
               <Form.Control.Feedback type="invalid">
                 {errors.email?.message}
               </Form.Control.Feedback>
             </Form.Group>
-            {/*apartado de la fecha de nacimiento y codigos prmocionales*/}
+
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="birthDate">
-                  <Form.Label>Fecha de nacimiento</Form.Label>
+                  <Form.Label className="register-label">
+                    <i className="bi bi-calendar me-2"></i>
+                    Fecha de nacimiento
+                  </Form.Label>
                   <Form.Control
                     type="date"
+                    className="register-input"
                     {...register('birthDate', {
                       required: 'La fecha de nacimiento es obligatoria',
                       validate: {
@@ -235,8 +274,14 @@ export default function Register() {
               
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="promoCode">
-                  <Form.Label>Código promocional (opcional)</Form.Label>
-                  <Form.Control type="text" placeholder="FELICES50"
+                  <Form.Label className="register-label">
+                    <i className="bi bi-gift me-2"></i>
+                    Código promocional (opcional)
+                  </Form.Label>
+                  <Form.Control 
+                    type="text" 
+                    placeholder="FELICES50"
+                    className="register-input"
                     {...register('promoCode', {
                       setValueAs: (value) => value?.trim() || ''
                     })}
@@ -249,10 +294,16 @@ export default function Register() {
                 </Form.Group>
               </Col>
             </Row>
-            {/*apartado de contraseña*/}
+
             <Form.Group className="mb-3" controlId="password">
-              <Form.Label>Contraseña</Form.Label>
-              <Form.Control type="password" placeholder="••••••••"
+              <Form.Label className="register-label">
+                <i className="bi bi-lock me-2"></i>
+                Contraseña
+              </Form.Label>
+              <Form.Control 
+                type="password" 
+                placeholder="••••••••"
+                className="register-input"
                 {...register('password', {
                   required: 'La contraseña es obligatoria',
                   minLength: {
@@ -269,10 +320,14 @@ export default function Register() {
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="confirmPassword">
-              <Form.Label>Confirmar contraseña</Form.Label>
+              <Form.Label className="register-label">
+                <i className="bi bi-shield-check me-2"></i>
+                Confirmar contraseña
+              </Form.Label>
               <Form.Control
                 type="password"
                 placeholder="••••••••"
+                className="register-input"
                 {...register('confirmPassword', {
                   required: 'Confirma tu contraseña',
                   validate: value =>
@@ -286,17 +341,32 @@ export default function Register() {
               </Form.Control.Feedback>
             </Form.Group>
 
-            <Button variant="success" type="submit" className="w-100" disabled={loading}>
-              {loading ? 'Registrando...' : 'Registrarse'}
+            <Button type="submit" className="register-button w-100" disabled={loading}>
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2"></span>
+                  Registrando...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-person-plus me-2"></i>
+                  Crear Cuenta
+                </>
+              )}
             </Button>
           </Form>
 
-          <div className="text-center mt-3">
-            <p className="mb-0">¿Ya tienes cuenta?</p>
-            <Link to="/login" className="btn btn-link">Inicia sesión aquí </Link>
+          <div className="register-footer">
+            <p className="register-footer-text">
+              ¿Ya tienes cuenta?{' '}
+              <Link to="/login" className="register-link">
+                Inicia sesión aquí
+              </Link>
+            </p>
           </div>
         </Card.Body>
       </Card>
     </Container>
+    </div>
   );
 }
