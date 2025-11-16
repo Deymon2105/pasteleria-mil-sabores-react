@@ -13,18 +13,38 @@
     font-weight:900;
     color: var(--accent-choc);
     font-family: var(--font-heading);
+    text-decoration: none;
 }
 
 
 .admin-header__nav{
     display:flex;
-    gap: .5rem
+    gap: .5rem;
+    flex: 1;
+    justify-content: center;
 }
 
 
 .admin-header__link{
     color: var(--text-primary);
-    text-decoration:none
+    text-decoration:none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.admin-header__link:hover{
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.admin-header__link.active{
+    background-color: var(--accent-choc);
+    color: white;
+}
+
+.admin-header__user{
+    display: flex;
+    align-items: center;
 }
 
 

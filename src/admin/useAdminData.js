@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { orderService, userService } from '../service/api'
 
 export default function useAdminData(){
@@ -6,6 +6,12 @@ export default function useAdminData(){
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const ordersRef = useRef([])
+
+  // Mantener referencia actualizada de orders
+  useEffect(() => {
+    ordersRef.current = orders
+  }, [orders])
 
   // Cargar datos al montar
   useEffect(() => {
@@ -34,18 +40,18 @@ export default function useAdminData(){
 
   const updateOrderStatus = useCallback(async (code, status) => {
     try {
-      // Encontrar el pedido por código
-      const order = orders.find(o => o.code === code)
+      // Encontrar el pedido por código usando la referencia actualizada
+      const order = ordersRef.current.find(o => o.code === code)
       if (!order) {
         console.error('Pedido no encontrado con código:', code)
-        return
+        throw new Error('Pedido no encontrado')
       }
 
       // Actualizar en el servidor usando el ID del pedido
       const { data: updatedOrder } = await orderService.updateStatus(order.id, status)
       if (!updatedOrder) {
         console.warn('No se pudo obtener el pedido actualizado desde Supabase')
-        return
+        throw new Error('Error al actualizar el pedido')
       }
 
       // Actualizar localmente con la respuesta transformada
@@ -54,7 +60,7 @@ export default function useAdminData(){
       console.error('Error al actualizar estado del pedido:', err)
       throw err
     }
-  }, [orders])
+  }, [])
 
   return { orders, users, updateOrderStatus, loading, error, loadData }
 }

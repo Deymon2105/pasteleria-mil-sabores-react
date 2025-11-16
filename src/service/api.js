@@ -16,6 +16,24 @@ const checkAuth = async () => {
   return session;
 };
 
+const requireAdmin = async () => {
+  const session = await checkAuth();
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+
+  if (error) handleSupabaseError(error, 'Error al validar permisos');
+  if (!profile || profile.role !== 'admin') {
+    window.dispatchEvent(new Event('forbidden'));
+    throw new Error('Acceso restringido: se requiere rol de administrador');
+  }
+
+  return session;
+};
+
 // Helper para transformar productos de Supabase al formato del frontend
 const transformProduct = (product) => {
   if (!product) return null;
@@ -286,7 +304,7 @@ export const productService = {
   },
 
   create: async (product) => {
-    await checkAuth();
+    await requireAdmin();
     
     // Transformar producto al formato de Supabase
     const productData = transformProductToSupabase(product);
@@ -303,7 +321,7 @@ export const productService = {
   },
 
   update: async (id, product) => {
-    await checkAuth();
+    await requireAdmin();
     
     // Transformar producto al formato de Supabase
     const productData = transformProductToSupabase(product);
@@ -321,7 +339,7 @@ export const productService = {
   },
 
   delete: async (id) => {
-    await checkAuth();
+    await requireAdmin();
     
     const { error } = await supabase
       .from('products')
@@ -346,7 +364,7 @@ export const userService = {
   },
 
   getAll: async () => {
-    await checkAuth();
+    await requireAdmin();
     
     const { data, error } = await supabase
       .from('profiles')
@@ -358,7 +376,7 @@ export const userService = {
   },
 
   getById: async (id) => {
-    await checkAuth();
+    await requireAdmin();
     
     const { data, error } = await supabase
       .from('profiles')
@@ -371,7 +389,7 @@ export const userService = {
   },
 
   update: async (id, userData) => {
-    await checkAuth();
+    await requireAdmin();
     
     const { data, error } = await supabase
       .from('profiles')
@@ -385,7 +403,7 @@ export const userService = {
   },
 
   delete: async (id) => {
-    await checkAuth();
+    await requireAdmin();
     
     const { error } = await supabase
       .from('profiles')
@@ -400,7 +418,7 @@ export const userService = {
 // ==================== PEDIDOS ====================
 export const orderService = {
   getAll: async () => {
-    await checkAuth();
+    await requireAdmin();
     
     const { data, error } = await supabase
       .from('orders')
@@ -424,7 +442,7 @@ export const orderService = {
   },
 
   getById: async (id) => {
-    await checkAuth();
+    await requireAdmin();
     
     const { data, error } = await supabase
       .from('orders')
@@ -495,7 +513,7 @@ export const orderService = {
   },
 
   updateStatus: async (id, status) => {
-    await checkAuth();
+    await requireAdmin();
     
     const { error } = await supabase
       .from('orders')
