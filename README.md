@@ -2,6 +2,15 @@
 
 Sistema de e-commerce para pastelería con panel de administración y gestión de usuarios.
 
+## 🔐 Autenticación con JWT
+
+**Esta aplicación usa Supabase para autenticación con JWT automática.**
+
+- ✅ JWT generado automáticamente al login/register
+- ✅ Renovación automática de tokens
+- ✅ Almacenamiento seguro en sessionStorage
+- ✅ Inclusión automática en todas las peticiones
+
 ## 🎯 Acceso Rápido para Demo
 
 ### 👤 **Panel de Administración**
@@ -19,6 +28,10 @@ Sistema de e-commerce para pastelería con panel de administración y gestión d
 ```bash
 # Instalar dependencias
 npm install
+
+# Configurar variables de entorno
+cp .env.example .env
+# Edita .env con tus credenciales de Supabase
 
 # Iniciar aplicación
 npm start

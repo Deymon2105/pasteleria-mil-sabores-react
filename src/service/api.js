@@ -6,12 +6,12 @@ const handleSupabaseError = (error, customMessage = 'Error en la operación') =>
   throw new Error(error.message || customMessage);
 };
 
-// Helper para verificar autenticación
+//Helper para verificar autenticación
 const checkAuth = async () => {
   const { data: { session }, error } = await supabase.auth.getSession();
   if (error || !session) {
     window.dispatchEvent(new Event('unauthorized'));
-    throw new Error('Usuario no autenticado');
+    throw new Error('Usuario no autenticado - se requiere JWT válido'); //Valida que existe una sesión activa con JWT válido
   }
   return session;
 };

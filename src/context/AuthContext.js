@@ -56,7 +56,6 @@ export function AuthProvider({ children }) {
       }
     })
 
-    // Cleanup
     return () => {
       subscription.unsubscribe()
     }
@@ -148,6 +147,24 @@ export function AuthProvider({ children }) {
     return currentUser !== null && session !== null
   }
 
+  /**
+   * Verifica si el JWT es válido y no ha expirado
+   * Supabase los refresca automáticamente
+   */
+  const isTokenValid = () => {
+    if (!session || !session.expires_at) return false
+    // Verificar si el token expira en más de 1 minuto
+    const expiresAt = session.expires_at * 1000 // Convertir a millisegundos
+    const now = Date.now()
+    return expiresAt > now + 60000 // 1 minuto de margen
+  }
+
+  
+   //Obtener el access token actual (JWT)
+  const getAccessToken = () => {
+    return session?.access_token || null
+  }
+
   return (
     <AuthContext.Provider value={{
       currentUser,
@@ -158,6 +175,8 @@ export function AuthProvider({ children }) {
       register,
       isAdmin,
       isLoggedIn,
+      isTokenValid,
+      getAccessToken,
       loading,
       loadUsers
     }}>

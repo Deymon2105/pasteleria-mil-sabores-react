@@ -9,9 +9,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
+    // Refresca automáticamente el JWT antes de que expire
     autoRefreshToken: true,
+    // Persiste la sesión en sessionStorage (se borra al cerrar navegador)
     persistSession: true,
+    // Detecta tokens en la URL (útil para magic links)
     detectSessionInUrl: true,
-    storage: window.sessionStorage, // Usar sessionStorage en lugar de localStorage
+    // sessionStorage es más seguro que localStorage para tokens
+    storage: window.sessionStorage,
   },
 });
