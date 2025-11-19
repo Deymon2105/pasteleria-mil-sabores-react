@@ -6,52 +6,21 @@ const handleSupabaseError = (error, customMessage = 'Error en la operación') =>
   throw new Error(error.message || customMessage);
 };
 
-/**
- * ✅ Helper para reintentar peticiones fallidas por problemas de red
- * Implementa backoff exponencial para evitar saturar el servidor
- * 
- * @param {Function} fn - Función async que retorna una promesa
- * @param {number} maxRetries - Número máximo de reintentos (default: 3)
- * @returns {Promise} - Resultado de la función o error después de todos los reintentos
- * 
- * Ejemplo de uso:
- * const data = await retryRequest(async () => {
- *   return await supabase.from('products').select('*');
- * });
- */
-const retryRequest = async (fn, maxRetries = 3) => {
-  let lastError;
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      // Solo reintentar si es un error de red/timeout, no errores de validación
-      const isNetworkError = 
-        error.message?.includes('fetch') || 
-        error.message?.includes('network') ||
-        error.message?.includes('timeout');
-      
-      if (!isNetworkError || i === maxRetries - 1) {
-        // Si no es error de red o ya agotamos reintentos, lanzar error
-        throw lastError;
-      }
-      
-      // Backoff exponencial: 1s, 2s, 4s
-      const delay = Math.pow(2, i) * 1000;
-      console.warn(`Reintento ${i + 1}/${maxRetries} después de ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-  throw lastError;
-};
-
 //Helper para verificar autenticación
 const checkAuth = async () => {
   const { data: { session }, error } = await supabase.auth.getSession();
+  
+  console.log('checkAuth - session:', session ? 'Existe' : 'No existe', 'error:', error);
+  
   if (error || !session) {
+    console.error('Error de autenticación:', {
+      hasError: !!error,
+      errorMessage: error?.message,
+      hasSession: !!session,
+      sessionStorage: !!window.sessionStorage.getItem('supabase.auth.token')
+    });
     window.dispatchEvent(new Event('unauthorized'));
-    throw new Error('Usuario no autenticado - se requiere JWT válido'); //Valida que existe una sesión activa con JWT válido
+    throw new Error('Usuario no autenticado - se requiere JWT válido');
   }
   return session;
 };
@@ -59,13 +28,29 @@ const checkAuth = async () => {
 const requireAdmin = async () => {
   const session = await checkAuth();
 
+  // Intentar obtener el perfil con manejo de errores mejorado
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', session.user.id)
     .single();
 
-  if (error) handleSupabaseError(error, 'Error al validar permisos');
+  // Si hay error de permisos RLS, verificar en metadata del usuario
+  if (error) {
+    console.warn('No se pudo verificar rol desde profiles, usando metadata del usuario:', error.message);
+    
+    // Fallback: verificar si el usuario tiene metadata de admin
+    const { data: { user } } = await supabase.auth.getUser();
+    const userRole = user?.user_metadata?.role || user?.app_metadata?.role;
+    
+    if (userRole !== 'admin') {
+      window.dispatchEvent(new Event('forbidden'));
+      throw new Error('Acceso restringido: se requiere rol de administrador');
+    }
+    
+    return session;
+  }
+  
   if (!profile || profile.role !== 'admin') {
     window.dispatchEvent(new Event('forbidden'));
     throw new Error('Acceso restringido: se requiere rol de administrador');
@@ -169,14 +154,45 @@ export const authService = {
     
     if (error) handleSupabaseError(error, 'Error al iniciar sesión');
     
-    // Obtener datos completos del usuario desde la tabla profiles
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
+    console.log('Login exitoso, obteniendo perfil...');
     
-    if (profileError) handleSupabaseError(profileError, 'Error al obtener perfil');
+    // Obtener datos completos del usuario desde la tabla profiles
+    // Intentar múltiples veces por si hay delay en RLS
+    let profile = null;
+    let profileError = null;
+    
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data: profileData, error: err } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (!err && profileData) {
+        profile = profileData;
+        break;
+      }
+      
+      profileError = err;
+      console.warn(`Intento ${attempt + 1} de obtener perfil falló:`, err?.message);
+      
+      // Esperar un poco antes de reintentar
+      if (attempt < 2) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+    
+    // Si después de 3 intentos no hay perfil, usar datos del auth.user
+    if (!profile) {
+      console.warn('No se pudo obtener perfil desde DB, usando datos de autenticación');
+      profile = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name || data.user.email,
+        role: data.user.user_metadata?.role || 'user',
+        benefits: data.user.user_metadata?.benefits || []
+      };
+    }
     
     return {
       data: {
@@ -574,7 +590,7 @@ export const orderService = {
   },
 
   getById: async (id) => {
-    await requireAdmin();
+    const session = await checkAuth();
     
     const { data, error } = await supabase
       .from('orders')
@@ -594,6 +610,12 @@ export const orderService = {
       .single();
     
     if (error) handleSupabaseError(error, 'Error al obtener pedido');
+    
+    // Verificar que el usuario sea dueño de la orden (las políticas RLS ya lo hacen, pero verificamos por seguridad)
+    if (data && data.user_id !== session.user.id) {
+      throw new Error('No tienes permiso para ver este pedido');
+    }
+    
     return { data: transformOrder(data) };
   },
 
@@ -607,6 +629,23 @@ export const orderService = {
       throw new Error('Usuario no autenticado');
     }
     
+    // Validar datos de entrada
+    if (!orderData.items || orderData.items.length === 0) {
+      throw new Error('El pedido debe contener al menos un producto');
+    }
+    
+    if (!orderData.shippingAddress || typeof orderData.shippingAddress !== 'object') {
+      throw new Error('Dirección de envío inválida');
+    }
+    
+    console.log('Creando pedido:', {
+      userId,
+      code: orderData.code,
+      total: orderData.total,
+      itemsCount: orderData.items.length,
+      items: orderData.items
+    });
+    
     // Crear el pedido
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -618,12 +657,17 @@ export const orderService = {
         discount: orderData.discount || 0,
         shipping_address: orderData.shippingAddress,
         payment_info: orderData.paymentInfo,
-        notes: orderData.notes,
+        notes: orderData.notes || '',
       }])
       .select()
       .single();
     
-    if (orderError) handleSupabaseError(orderError, 'Error al crear pedido');
+    if (orderError) {
+      console.error('Error al insertar orden en Supabase:', orderError);
+      handleSupabaseError(orderError, 'Error al crear pedido');
+    }
+    
+    console.log('Pedido creado exitosamente:', order);
     
     // Crear los items del pedido
     if (orderData.items && orderData.items.length > 0) {
@@ -634,14 +678,23 @@ export const orderService = {
         price: item.price,
       }));
       
+      console.log('Insertando items del pedido:', orderItems);
+      
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
       
-      if (itemsError) handleSupabaseError(itemsError, 'Error al crear items del pedido');
+      if (itemsError) {
+        console.error('Error al insertar items del pedido:', itemsError);
+        handleSupabaseError(itemsError, 'Error al crear items del pedido');
+      }
+      
+      console.log('Items del pedido creados exitosamente');
     }
     
-    return orderService.getById(order.id);
+    // Retornar la orden creada directamente
+    console.log('Orden completa creada exitosamente:', order);
+    return { data: transformOrder({ ...order, order_items: [] }) };
   },
 
   updateStatus: async (id, status) => {

@@ -29,7 +29,7 @@ export default function Compra() {
     const [cargando, setCargando] = useState(false);
     const [carritoInicial, setCarritoInicial] = useState([]);
 
-    // Obtener usuario y beneficios desde el contexto
+    // Obtener usuario y beneficios al cargar
     useEffect(() => {
         if (currentUser) {
             setUserBenefits(currentUser.benefits || []);
@@ -125,44 +125,51 @@ export default function Compra() {
         const pagoExitoso = Math.random() > 0.2; // 80% de éxito
 
         if (pagoExitoso) {
+            // Preparar información de envío
+            const shippingAddress = {
+                nombre: datosFormulario.nombre,
+                calle: datosFormulario.calle,
+                depto: datosFormulario.depto,
+                region: datosFormulario.region,
+                comuna: datosFormulario.comuna,
+                indicaciones: datosFormulario.mensaje
+            };
+
+            // Preparar información de pago (sin datos sensibles)
+            const paymentInfo = {
+                method: 'credit_card',
+                lastFourDigits: datosFormulario.numeroTarjeta.slice(-4),
+                cardHolderName: datosFormulario.nombreTarjeta
+            };
+
+            // Validar que haya items en el carrito
+            const itemsToOrder = carritoParaCalcular.length > 0 ? carritoParaCalcular : cart;
+            
+            if (!itemsToOrder || itemsToOrder.length === 0) {
+                alert('El carrito está vacío. Agrega productos antes de continuar.');
+                setCargando(false);
+                return;
+            }
+
+            // Crear objeto de pedido compatible con Supabase
+            const orderData = {
+                code: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                status: 'pending',
+                total: total,
+                discount: montoDescuento,
+                shippingAddress: shippingAddress,
+                paymentInfo: paymentInfo,
+                notes: datosFormulario.mensaje || '',
+                items: itemsToOrder.map(item => ({
+                    productId: item.id,
+                    quantity: item.qty || 1,
+                    price: item.price
+                }))
+            };
+
             try {
-                // Preparar información de envío
-                const shippingAddress = {
-                    nombre: datosFormulario.nombre,
-                    calle: datosFormulario.calle,
-                    depto: datosFormulario.depto,
-                    region: datosFormulario.region,
-                    comuna: datosFormulario.comuna,
-                    indicaciones: datosFormulario.mensaje
-                };
-
-                // Preparar información de pago (sin datos sensibles)
-                const paymentInfo = {
-                    method: 'credit_card',
-                    lastFourDigits: datosFormulario.numeroTarjeta.slice(-4),
-                    cardHolderName: datosFormulario.nombreTarjeta
-                };
-
-                // Crear objeto de pedido compatible con Supabase
-                const orderData = {
-                    code: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    status: 'pending',
-                    total: total,
-                    discount: montoDescuento,
-                    shippingAddress: shippingAddress,
-                    paymentInfo: paymentInfo,
-                    notes: datosFormulario.mensaje,
-                    items: carritoInicial.map(item => ({
-                        productId: item.id,
-                        quantity: item.qty || 1,
-                        price: item.price
-                    }))
-                };
-
                 // Enviar al backend (Supabase)
-                await orderService.create(orderData);
-
-                clearCart();
+                await orderService.create(orderData);                clearCart();
                 setMostrarAlertaCompraExitosa(true);
                 setCargando(false);
                 
@@ -187,6 +194,21 @@ export default function Compra() {
 
             } catch (error) {
                 console.error('Error al procesar compra:', error);
+                console.error('Detalle del error:', {
+                    message: error.message,
+                    stack: error.stack,
+                    orderData: {
+                        code: orderData?.code,
+                        total: orderData?.total,
+                        itemsCount: orderData?.items?.length,
+                        userId: currentUser?.id
+                    }
+                });
+                
+                // Mostrar mensaje más descriptivo al usuario
+                const errorMessage = error.message || 'Error desconocido al procesar la compra';
+                alert(`Error: ${errorMessage}\n\nRevisa la consola para más detalles.`);
+                
                 setMostrarAlertaCompraAnulada(true);
                 setCargando(false);
                 window.scrollTo({ top: 0, behavior: 'smooth' });

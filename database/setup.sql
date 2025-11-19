@@ -93,7 +93,29 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================
--- PASO 4: CREAR POLÍTICAS RLS - PROFILES
+-- PASO 4: CREAR FUNCIÓN HELPER PARA VERIFICAR ADMIN
+-- ============================================================
+
+-- Función que verifica si el usuario actual es admin
+-- Usa SECURITY DEFINER para evitar recursión en RLS
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM public.profiles
+    WHERE id = auth.uid() 
+    AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+
+COMMENT ON FUNCTION public.is_admin() IS 'Verifica si el usuario actual tiene rol de administrador';
+
+-- ============================================================
+-- PASO 5: CREAR POLÍTICAS RLS - PROFILES
 -- ============================================================
 
 -- Los usuarios pueden ver su propio perfil
@@ -106,35 +128,20 @@ CREATE POLICY "Los usuarios pueden actualizar su propio perfil"
 ON public.profiles FOR UPDATE
 USING (auth.uid() = id);
 
--- Los admins pueden ver todos los perfiles
+-- Los admins pueden ver todos los perfiles (sin recursión)
 CREATE POLICY "Los admins pueden ver todos los perfiles"
 ON public.profiles FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+USING (public.is_admin());
 
--- Los admins pueden actualizar todos los perfiles
+-- Los admins pueden actualizar todos los perfiles (sin recursión)
 CREATE POLICY "Los admins pueden actualizar todos los perfiles"
 ON public.profiles FOR UPDATE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+USING (public.is_admin());
 
--- Los admins pueden eliminar perfiles
+-- Los admins pueden eliminar perfiles (sin recursión)
 CREATE POLICY "Los admins pueden eliminar perfiles"
 ON public.profiles FOR DELETE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+USING (public.is_admin());
 
 -- Permitir inserción de perfiles (para registro)
 CREATE POLICY "Permitir inserción de perfiles"
@@ -142,7 +149,7 @@ ON public.profiles FOR INSERT
 WITH CHECK (true);
 
 -- ============================================================
--- PASO 5: CREAR POLÍTICAS RLS - PRODUCTS
+-- PASO 6: CREAR POLÍTICAS RLS - PRODUCTS
 -- ============================================================
 
 -- Todos pueden ver los productos
@@ -150,35 +157,20 @@ CREATE POLICY "Todos pueden ver los productos"
 ON public.products FOR SELECT
 USING (true);
 
--- Solo admins pueden insertar productos
+-- Solo admins pueden insertar productos (sin recursión)
 CREATE POLICY "Solo admins pueden insertar productos"
 ON public.products FOR INSERT
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+WITH CHECK (public.is_admin());
 
--- Solo admins pueden actualizar productos
+-- Solo admins pueden actualizar productos (sin recursión)
 CREATE POLICY "Solo admins pueden actualizar productos"
 ON public.products FOR UPDATE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+USING (public.is_admin());
 
--- Solo admins pueden eliminar productos
+-- Solo admins pueden eliminar productos (sin recursión)
 CREATE POLICY "Solo admins pueden eliminar productos"
 ON public.products FOR DELETE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+USING (public.is_admin());
 
 -- ============================================================
 -- PASO 6: CREAR POLÍTICAS RLS - ORDERS
@@ -194,25 +186,15 @@ CREATE POLICY "Los usuarios pueden crear sus propios pedidos"
 ON public.orders FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
--- Los admins pueden ver todos los pedidos
+-- Los admins pueden ver todos los pedidos (sin recursión)
 CREATE POLICY "Los admins pueden ver todos los pedidos"
 ON public.orders FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+USING (public.is_admin());
 
--- Los admins pueden actualizar todos los pedidos
+-- Los admins pueden actualizar todos los pedidos (sin recursión)
 CREATE POLICY "Los admins pueden actualizar todos los pedidos"
 ON public.orders FOR UPDATE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+USING (public.is_admin());
 
 -- ============================================================
 -- PASO 7: CREAR POLÍTICAS RLS - ORDER_ITEMS
@@ -238,15 +220,10 @@ WITH CHECK (
   )
 );
 
--- Los admins pueden ver todos los items
+-- Los admins pueden ver todos los items (sin recursión)
 CREATE POLICY "Los admins pueden ver todos los items"
 ON public.order_items FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND role = 'admin'
-  )
-);
+USING (public.is_admin());
 
 -- ============================================================
 -- PASO 8: CREAR FUNCIONES
