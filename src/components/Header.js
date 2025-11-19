@@ -68,6 +68,11 @@ export default function Header(){
                       <i className="bi bi-envelope me-2"></i>
                       <small>{currentUser.email}</small>
                     </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item as={Link} to="/my-orders">
+                      <i className="bi bi-bag-check me-2"></i>
+                      Mis Pedidos
+                    </Dropdown.Item>
                     {isAdmin() && (
                       <>
                         <Dropdown.Divider />

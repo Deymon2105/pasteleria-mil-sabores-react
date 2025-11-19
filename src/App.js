@@ -19,6 +19,7 @@ import ProductsAdmin from './admin/Products'
 import UsersAdmin from './admin/Users'
 import Register from './pages/Register';
 import Compra from './pages/Compra';
+import MyOrders from './pages/MyOrders';
 
 function App() {
   return (
@@ -37,6 +38,13 @@ function App() {
               <Route path="/register" element={<Register/>}/>
               <Route path="/cart" element={<Cart/>} />
               <Route path="/compra" element={<Compra/>} />
+              
+              {/* ✅ Ruta protegida para historial de pedidos del usuario */}
+              <Route path="/my-orders" element={
+                <ProtectedRoute requireAdmin={false}>
+                  <MyOrders />
+                </ProtectedRoute>
+              } />
               
               {/*rutas de admin protegidas */}
               <Route path="/admin" element={

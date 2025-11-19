@@ -33,6 +33,32 @@ export default function Catalogo() {
     }
   }
 
+  // ✅ Buscar productos usando la API
+  useEffect(() => {
+    const searchProducts = async () => {
+      if (searchTerm.trim() === '') {
+        // Si el campo está vacío, cargar todos los productos
+        loadProducts()
+        return
+      }
+
+      try {
+        setError(null)
+        const response = await productService.search(searchTerm)
+        setProducts(response.data)
+        setSelectedCategory('Todos') // se resetea categoría al buscar
+      } catch (err) {
+        console.error('Error al buscar productos:', err)
+        setError('Error al buscar productos. Por favor, intenta de nuevo.')
+      }
+    }
+
+    const timeoutId = setTimeout(() => {
+      searchProducts()
+    }, 500)
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm])
+
   const handleVerDetalles = (producto) => {
     setProductoSeleccionado(producto)
   }
@@ -44,11 +70,10 @@ export default function Catalogo() {
   // Extraer categorías dinámicamente desde los productos
   const categories = ['Todos', ...new Set(products.map(p => p.category))]
 
+  // Filtrar por categoría
   const filteredProducts = products.filter(product => {
-    const matchCategory = selectedCategory === 'Todos' || product.category === selectedCategory //filtro categoría
-    const matchSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        product.desc.toLowerCase().includes(searchTerm.toLowerCase()) //filtro texto
-    return matchCategory && matchSearch
+    const matchCategory = selectedCategory === 'Todos' || product.category === selectedCategory
+    return matchCategory
   })
 
   if (loading) {

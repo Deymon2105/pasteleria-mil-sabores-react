@@ -6,6 +6,46 @@ const handleSupabaseError = (error, customMessage = 'Error en la operación') =>
   throw new Error(error.message || customMessage);
 };
 
+/**
+ * ✅ Helper para reintentar peticiones fallidas por problemas de red
+ * Implementa backoff exponencial para evitar saturar el servidor
+ * 
+ * @param {Function} fn - Función async que retorna una promesa
+ * @param {number} maxRetries - Número máximo de reintentos (default: 3)
+ * @returns {Promise} - Resultado de la función o error después de todos los reintentos
+ * 
+ * Ejemplo de uso:
+ * const data = await retryRequest(async () => {
+ *   return await supabase.from('products').select('*');
+ * });
+ */
+const retryRequest = async (fn, maxRetries = 3) => {
+  let lastError;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      // Solo reintentar si es un error de red/timeout, no errores de validación
+      const isNetworkError = 
+        error.message?.includes('fetch') || 
+        error.message?.includes('network') ||
+        error.message?.includes('timeout');
+      
+      if (!isNetworkError || i === maxRetries - 1) {
+        // Si no es error de red o ya agotamos reintentos, lanzar error
+        throw lastError;
+      }
+      
+      // Backoff exponencial: 1s, 2s, 4s
+      const delay = Math.pow(2, i) * 1000;
+      console.warn(`Reintento ${i + 1}/${maxRetries} después de ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError;
+};
+
 //Helper para verificar autenticación
 const checkAuth = async () => {
   const { data: { session }, error } = await supabase.auth.getSession();
@@ -171,20 +211,33 @@ export const authService = {
     
     if (authError) handleSupabaseError(authError, 'Error al registrar usuario');
     
-    // Esperar un momento para que el trigger cree el perfil
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // ✅ MEJORADO: Reintentar con backoff exponencial en lugar de un timeout fijo
+    // Esto maneja mejor la race condition con el trigger de base de datos
+    let profile = null;
+    let attempts = 0;
+    const maxAttempts = 5;
     
-    // Obtener el perfil creado por el trigger
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authData.user.id)
-      .single();
+    while (!profile && attempts < maxAttempts) {
+      // Backoff exponencial: 200ms, 400ms, 800ms, 1600ms, 3200ms
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempts) * 200));
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+      
+      if (!error && data) {
+        profile = data;
+        break;
+      }
+      attempts++;
+    }
     
-    // Si el perfil no existe (el trigger falló), crearlo manualmente
+    // Si después de 5 intentos no existe, crear manualmente
     let finalProfile = profile;
-    if (profileError || !profile) {
-      console.log('Perfil no encontrado, creando manualmente...');
+    if (!profile) {
+      console.warn('Trigger no creó el perfil después de 5 intentos, creando manualmente...');
       const { data: newProfile, error: createError } = await supabase
         .from('profiles')
         .insert([{
@@ -199,13 +252,17 @@ export const authService = {
         .single();
       
       if (createError) {
-        console.error('Error al crear perfil manualmente:', createError);
-        // Si falla, intentar obtenerlo de nuevo (puede que el trigger lo creó)
+        console.error('Error crítico al crear perfil:', createError);
+        // Último intento: verificar si existe
         const { data: retryProfile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', authData.user.id)
           .single();
+        
+        if (!retryProfile) {
+          throw new Error('No se pudo crear el perfil del usuario');
+        }
         finalProfile = retryProfile;
       } else {
         finalProfile = newProfile;
@@ -263,16 +320,44 @@ export const authService = {
 
 // ==================== PRODUCTOS ====================
 export const productService = {
-  getAll: async () => {
-    const { data, error } = await supabase
+  /**
+   * ✅ Obtener todos los productos con paginación opcional
+   * @param {number} page - Número de página (default: null para todos)
+   * @param {number} pageSize - Tamaño de página (default: null para todos)
+   * @returns {Object} { data: [], total, page, pageSize, totalPages } o { data: [] }
+   */
+  getAll: async (page = null, pageSize = null) => {
+    let query = supabase
       .from('products')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
+    
+    // Solo aplicar paginación si se especifican ambos parámetros
+    if (page !== null && pageSize !== null) {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+    }
+    
+    const { data, error, count } = await query;
     
     if (error) handleSupabaseError(error, 'Error al obtener productos');
     
     // Transformar productos al formato del frontend
     const transformedData = data ? data.map(transformProduct) : [];
+    
+    // Si hay paginación, retornar metadata
+    if (page !== null && pageSize !== null) {
+      return { 
+        data: transformedData,
+        total: count || 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count || 0) / pageSize)
+      };
+    }
+    
+    // Sin paginación, retornar solo los datos
     return { data: transformedData };
   },
 
@@ -347,7 +432,32 @@ export const productService = {
       .eq('id', id);
     
     if (error) handleSupabaseError(error, 'Error al eliminar producto');
-    return { data: { success: true } };
+    return { success: true };
+  },
+
+  /**
+   * ✅ NUEVO - Buscar productos por nombre o descripción
+   * @param {string} query - Texto a buscar
+   * @returns {Object} { data: [] } - Productos que coinciden con la búsqueda
+   */
+  search: async (query) => {
+    if (!query || query.trim() === '') {
+      // Si no hay query, retornar todos los productos
+      return productService.getAll();
+    }
+
+    const searchTerm = `%${query.trim()}%`;
+    
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .or(`name.ilike.${searchTerm},description.ilike.${searchTerm}`)
+      .order('created_at', { ascending: false });
+    
+    if (error) handleSupabaseError(error, 'Error al buscar productos');
+    
+    const transformedData = data ? data.map(transformProduct) : [];
+    return { data: transformedData };
   },
 };
 
@@ -417,10 +527,20 @@ export const userService = {
 
 // ==================== PEDIDOS ====================
 export const orderService = {
-  getAll: async () => {
+  /**
+   * ✅ Obtener todos los pedidos (solo admin) con paginación
+   * @param {number} page - Número de página (default: 1)
+   * @param {number} pageSize - Tamaño de página (default: 20)
+   * @returns {Object} { data: [], total, page, pageSize, totalPages }
+   */
+  getAll: async (page = 1, pageSize = 20) => {
     await requireAdmin();
     
-    const { data, error } = await supabase
+    // Calcular rango para paginación
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    
+    const { data, error, count } = await supabase
       .from('orders')
       .select(`
         *,
@@ -433,12 +553,20 @@ export const orderService = {
           price,
           product:products(id, name, price, image)
         )
-      `)
+      `, { count: 'exact' }) // ✅ Obtener conteo total
+      .range(from, to)
       .order('created_at', { ascending: false });
     
     if (error) handleSupabaseError(error, 'Error al obtener pedidos');
     const transformed = Array.isArray(data) ? data.map(transformOrder) : [];
-    return { data: transformed };
+    
+    return { 
+      data: transformed,
+      total: count || 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((count || 0) / pageSize)
+    };
   },
 
   getById: async (id) => {
@@ -525,6 +653,35 @@ export const orderService = {
     if (error) handleSupabaseError(error, 'Error al actualizar estado del pedido');
     // Recuperar el pedido completo para mantener estructura consistente
     return orderService.getById(id);
+  },
+
+  /**
+   * ✅ NUEVO - Obtener pedidos del usuario actual
+   * Permite a los usuarios ver su historial de compras
+   * @returns {Object} { data: [] } - Lista de pedidos del usuario autenticado
+   */
+  getMyOrders: async () => {
+    const session = await checkAuth();
+    const userId = session.user.id;
+    
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items(
+          id,
+          quantity,
+          price,
+          product:products(id, name, image, price)
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    
+    if (error) handleSupabaseError(error, 'Error al obtener mis pedidos');
+    
+    const transformed = Array.isArray(data) ? data.map(transformOrder) : [];
+    return { data: transformed };
   },
 };
 

@@ -215,13 +215,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Comentar este trigger si NO quieres gestión automática de stock
-/*
+-- ✅ ACTIVADO: Trigger para validar stock antes de crear pedido
 CREATE TRIGGER validate_stock_before_order
 BEFORE INSERT ON public.order_items
 FOR EACH ROW
 EXECUTE FUNCTION check_product_stock();
-*/
 
 -- ============================================================
 -- FUNCIÓN PARA RESTAURAR STOCK AL CANCELAR PEDIDO
@@ -243,13 +241,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Comentar este trigger si NO quieres gestión automática de stock
-/*
+-- ✅ ACTIVADO: Trigger para restaurar stock al cancelar pedido
 CREATE TRIGGER restore_stock_on_order_cancel
 AFTER UPDATE ON public.orders
 FOR EACH ROW
 EXECUTE FUNCTION restore_stock_on_cancel();
-*/
 
 -- ============================================================
 -- DATOS DE PRUEBA - USUARIOS ADICIONALES
