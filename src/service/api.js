@@ -283,8 +283,12 @@ export const authService = {
 
   // Cerrar sesión
   logout: async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) handleSupabaseError(error, 'Error al cerrar sesión');
+    
+    // Limpiar localStorage y sessionStorage
+    localStorage.clear();
+    sessionStorage.clear();
   },
 
   // Obtener sesión actual

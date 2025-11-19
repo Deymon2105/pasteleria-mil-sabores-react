@@ -271,12 +271,16 @@ export default function Compra() {
                                     <Form.Control 
                                         type="text" 
                                         name="nombre"
-                                        placeholder="Juan Pérez" 
+                                        placeholder="Ingresa tu nombre completo" 
                                         value={datosFormulario.nombre}
                                         onChange={manejarCambio}
-                                        disabled={!!currentUser}
                                         required 
                                     />
+                                    {currentUser && (
+                                        <Form.Text className="text-muted">
+                                            Autocompletado desde tu perfil. Puedes modificarlo si es necesario.
+                                        </Form.Text>
+                                    )}
                                 </Form.Group>
                                 
                                 <Form.Group className="mb-3" controlId="correo">
@@ -287,9 +291,13 @@ export default function Compra() {
                                         placeholder="tu@email.com"
                                         value={datosFormulario.correo}
                                         onChange={manejarCambio}
-                                        disabled={!!currentUser}
                                         required
                                     />
+                                    {currentUser && (
+                                        <Form.Text className="text-muted">
+                                            Autocompletado desde tu perfil. Puedes modificarlo si es necesario.
+                                        </Form.Text>
+                                    )}
                                 </Form.Group>
 
                                 <h5 className="mb-3 mt-4">Dirección de envío</h5>

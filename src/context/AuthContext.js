@@ -104,11 +104,14 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       await authService.logout()
+    } catch (error) {
+      console.error('Error en logout:', error)
+      // Continuar con la limpieza local incluso si falla la llamada a Supabase
+    } finally {
+      // Siempre limpiar el estado local
       setCurrentUser(null)
       setSession(null)
       window.dispatchEvent(new Event('userSessionChange'))
-    } catch (error) {
-      console.error('Error en logout:', error)
     }
   }
 
