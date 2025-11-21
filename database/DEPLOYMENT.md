@@ -369,7 +369,7 @@ Sentry.init({
 **Solución**:
 ```javascript
 // Verifica que las URLs estén correctas
-console.log('Supabase URL:', process.env.REACT_APP_SUPABASE_URL);
+console.log('Supabase URL dev:', process.env.REACT_APP_SUPABASE_URL);
 ```
 
 ### Error: "Invalid JWT"
