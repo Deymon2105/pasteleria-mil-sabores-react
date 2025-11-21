@@ -20,6 +20,8 @@ import UsersAdmin from './admin/Users'
 import Register from './pages/Register';
 import Compra from './pages/Compra';
 import MyOrders from './pages/MyOrders';
+import MyAddresses from './pages/MyAddresses';
+import OrderConfirmation from './pages/OrderConfirmation';
 
 function App() {
   return (
@@ -38,11 +40,19 @@ function App() {
               <Route path="/register" element={<Register/>}/>
               <Route path="/cart" element={<Cart/>} />
               <Route path="/compra" element={<Compra/>} />
+              <Route path="/order-confirmation" element={<OrderConfirmation/>} />
               
               {/* ✅ Ruta protegida para historial de pedidos del usuario */}
               <Route path="/my-orders" element={
                 <ProtectedRoute requireAdmin={false}>
                   <MyOrders />
+                </ProtectedRoute>
+              } />
+              
+              {/* ✅ Ruta protegida para gestionar direcciones guardadas */}
+              <Route path="/my-addresses" element={
+                <ProtectedRoute requireAdmin={false}>
+                  <MyAddresses />
                 </ProtectedRoute>
               } />
               

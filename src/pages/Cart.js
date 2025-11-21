@@ -1,26 +1,41 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 import { Button, ListGroup, Alert, Badge } from 'react-bootstrap'
 import { Link } from 'react-router-dom'
 
 export default function Cart(){
   const { cart, removeFromCart, clearCart } = useCart()
-  const [userBenefits, setUserBenefits] = useState([])
-  const [userName, setUserName] = useState('')
-
-  // Obtener beneficios y nombre del usuario
-  useEffect(() => {
-    const usuarioActual = localStorage.getItem('currentUser')
-    if (usuarioActual) {
+  const { currentUser, isLoggedIn } = useAuth()
+  
+  // Obtener beneficios y nombre del usuario desde el contexto de autenticación
+  // Asegurarse de que benefits sea siempre un array
+  const getUserBenefits = () => {
+    if (!isLoggedIn() || !currentUser) return [];
+    
+    const benefits = currentUser.benefits;
+    
+    // Si benefits es un string (JSON), parsearlo
+    if (typeof benefits === 'string') {
       try {
-        const usuario = JSON.parse(usuarioActual)
-        setUserBenefits(usuario.benefits || [])
-        setUserName(usuario.name || '')
-      } catch (error) {
-        console.error('Error al obtener datos del usuario:', error)
+        const parsed = JSON.parse(benefits);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
       }
     }
-  }, [])
+    
+    // Si ya es un array, retornarlo
+    if (Array.isArray(benefits)) {
+      return benefits;
+    }
+    
+    // Si es null o undefined, retornar array vacío
+    return [];
+  };
+  
+  const userBenefits = getUserBenefits();
+  const userName = isLoggedIn() && currentUser ? currentUser.name : '';
 
   const subtotal = cart.reduce((s,p)=> s + (p.price*(p.qty||1)), 0)
 

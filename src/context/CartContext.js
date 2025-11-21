@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react'
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react'
 
 const CartContext = createContext()
 
@@ -45,24 +45,27 @@ export function CartProvider({ children }){
   }, [])
 
 
-  const addToCart = (product) => {
+  const addToCart = useCallback((product) => {
     setCart(prev => {
       const found = prev.find(p=>p.id===product.id)
       if(found) return prev.map(p=>p.id===product.id?{...p, qty: p.qty+1}:p)
       return [...prev, {...product, qty:1}]
     })
-  }
+  }, [])
 
 
-  const removeFromCart = (id) => setCart(prev => prev.filter(p=>p.id!==id))
-  const clearCart = () => setCart([])
+  const removeFromCart = useCallback((id) => setCart(prev => prev.filter(p=>p.id!==id)), [])
+  const clearCart = useCallback(() => setCart([]), [])
 
 
-  const totalCount = cart.reduce((s,p)=>s+(p.qty||1),0)
+  const totalCount = useMemo(() => cart.reduce((s,p)=>s+(p.qty||1),0), [cart])
 
+  const value = useMemo(() => ({
+    cart, addToCart, removeFromCart, clearCart, totalCount
+  }), [cart, addToCart, removeFromCart, clearCart, totalCount])
 
   return (
-    <CartContext.Provider value={{cart, addToCart, removeFromCart, clearCart, totalCount}}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   )

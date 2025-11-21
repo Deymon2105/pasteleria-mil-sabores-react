@@ -9,21 +9,28 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, currentUser, isAdmin } = useAuth();
+  const { login, currentUser } = useAuth();
+  
+  // Ref para evitar actualizar estado si el componente se desmonta
+  const mounted = React.useRef(true);
 
   const fondoLogin = process.env.PUBLIC_URL + '/img/fondoLogin.png';
   const logoPasteleria = process.env.PUBLIC_URL + '/img/logoPasteleria.png';
+  
+  useEffect(() => {
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => { 
     if (currentUser) {
       // Si ya hay sesión, redirigir según el rol
-      if (isAdmin()) {
-        navigate('/admin');
+      if (currentUser.role === 'admin') {
+        navigate('/admin', { replace: true });
       } else {
-        navigate('/');
+        navigate('/', { replace: true });
       }
     }
-  }, [currentUser, isAdmin, navigate]);
+  }, [currentUser, navigate]);
 
   const onSubmit = async (data) => {
     setError('');
@@ -33,22 +40,25 @@ export default function Login() {
       const email = data.email.trim();
       const password = data.password?.trim() || '';
 
+      console.log('Iniciando login para:', email);
       const result = await login(email, password);
+      console.log('Resultado login:', result);
 
       if (!result.success) {
         throw new Error(result.error || 'Email o contraseña incorrectos');
       }
       
-      // Redirigir según el rol del usuario
-      if (result.user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/');
-      }
+      console.log('Login exitoso, esperando redirección...');
+      // No redirigir aquí - el useEffect se encargará cuando currentUser se actualice
     } catch (err) {
-      setError(err.message);
+      console.error('Error en login:', err);
+      if (mounted.current) {
+        setError(err.message || 'Error al iniciar sesión');
+      }
     } finally {
-      setLoading(false);
+      if (mounted.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -157,18 +167,6 @@ export default function Login() {
                   Regístrate gratis
                 </Link>
               </p>
-            </div>
-
-            {/* Usuarios de prueba */}
-            <div className="login-demo">
-              <p className="login-demo-title">
-                <i className="bi bi-info-circle me-1"></i>
-                Usuarios de prueba:
-              </p>
-              <div className="login-demo-credentials">
-                <code>ana@duocuc.cl / admin123</code>
-                <code>luis@example.com / 123456</code>
-              </div>
             </div>
           </Card.Body>
         </Card>

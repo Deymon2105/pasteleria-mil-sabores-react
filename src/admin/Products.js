@@ -166,6 +166,18 @@ export default function Products(){
                     />
                   </div>
                   <div style={{marginBottom:'10px'}}>
+                    <label style={{display:'block', marginBottom:'5px', fontWeight:'bold'}}>Stock disponible:</label>
+                    <input 
+                      className="form__input" 
+                      type="number"
+                      min="0"
+                      value={editForm.stock || 0} 
+                      onChange={(e) => setEditForm({...editForm, stock: parseInt(e.target.value) || 0})}
+                      placeholder="Unidades disponibles"
+                      style={{width:'100%'}}
+                    />
+                  </div>
+                  <div style={{marginBottom:'10px'}}>
                     <label style={{display:'block', marginBottom:'5px', fontWeight:'bold'}}>URL Imagen:</label>
                     <input 
                       className="form__input" 
@@ -192,6 +204,9 @@ export default function Products(){
                   <h3 className="product-card__name">{p.title}</h3>
                   <div className="product-card__price">{(p.price).toLocaleString('es-CL',{style:'currency',currency:'CLP'})}</div>
                   <small style={{display:'block', margin:'5px 0', color:'#666'}}>{p.category}</small>
+                  <div style={{margin:'5px 0'}}>
+                    <strong>Stock:</strong> <span style={{color: p.stock > 5 ? '#28a745' : p.stock > 0 ? '#ffc107' : '#dc3545'}}>{p.stock || 0} unidades</span>
+                  </div>
                   {p.featured && <span style={{background:'#ffc107', padding:'2px 6px', borderRadius:'3px', fontSize:'0.8em'}}>DESTACADO</span>}
                   <div style={{marginTop: '10px'}}>
                     <button className="btn" onClick={() => handleEdit(p)}>Editar</button>

@@ -6,21 +6,52 @@ const handleSupabaseError = (error, customMessage = 'Error en la operación') =>
   throw new Error(error.message || customMessage);
 };
 
+/**
+ * ✅ Helper para reintentar peticiones fallidas por problemas de red
+ * Implementa backoff exponencial para evitar saturar el servidor
+ * 
+ * @param {Function} fn - Función async que retorna una promesa
+ * @param {number} maxRetries - Número máximo de reintentos (default: 3)
+ * @returns {Promise} - Resultado de la función o error después de todos los reintentos
+ * 
+ * Ejemplo de uso:
+ * const data = await retryRequest(async () => {
+ *   return await supabase.from('products').select('*');
+ * });
+ */
+const retryRequest = async (fn, maxRetries = 3) => {
+  let lastError;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      // Solo reintentar si es un error de red/timeout, no errores de validación
+      const isNetworkError = 
+        error.message?.includes('fetch') || 
+        error.message?.includes('network') ||
+        error.message?.includes('timeout');
+      
+      if (!isNetworkError || i === maxRetries - 1) {
+        // Si no es error de red o ya agotamos reintentos, lanzar error
+        throw lastError;
+      }
+      
+      // Backoff exponencial: 1s, 2s, 4s
+      const delay = Math.pow(2, i) * 1000;
+      console.warn(`Reintento ${i + 1}/${maxRetries} después de ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError;
+};
+
 //Helper para verificar autenticación
 const checkAuth = async () => {
   const { data: { session }, error } = await supabase.auth.getSession();
-  
-  console.log('checkAuth - session:', session ? 'Existe' : 'No existe', 'error:', error);
-  
   if (error || !session) {
-    console.error('Error de autenticación:', {
-      hasError: !!error,
-      errorMessage: error?.message,
-      hasSession: !!session,
-      sessionStorage: !!window.sessionStorage.getItem('supabase.auth.token')
-    });
     window.dispatchEvent(new Event('unauthorized'));
-    throw new Error('Usuario no autenticado - se requiere JWT válido');
+    throw new Error('Usuario no autenticado - se requiere JWT válido'); //Valida que existe una sesión activa con JWT válido
   }
   return session;
 };
@@ -28,29 +59,13 @@ const checkAuth = async () => {
 const requireAdmin = async () => {
   const session = await checkAuth();
 
-  // Intentar obtener el perfil con manejo de errores mejorado
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', session.user.id)
     .single();
 
-  // Si hay error de permisos RLS, verificar en metadata del usuario
-  if (error) {
-    console.warn('No se pudo verificar rol desde profiles, usando metadata del usuario:', error.message);
-    
-    // Fallback: verificar si el usuario tiene metadata de admin
-    const { data: { user } } = await supabase.auth.getUser();
-    const userRole = user?.user_metadata?.role || user?.app_metadata?.role;
-    
-    if (userRole !== 'admin') {
-      window.dispatchEvent(new Event('forbidden'));
-      throw new Error('Acceso restringido: se requiere rol de administrador');
-    }
-    
-    return session;
-  }
-  
+  if (error) handleSupabaseError(error, 'Error al validar permisos');
   if (!profile || profile.role !== 'admin') {
     window.dispatchEvent(new Event('forbidden'));
     throw new Error('Acceso restringido: se requiere rol de administrador');
@@ -97,6 +112,28 @@ const toNumber = (value) => {
   return Number.isNaN(numeric) ? 0 : numeric;
 };
 
+// Helper para normalizar benefits (puede venir como string, array o null)
+const normalizeBenefits = (benefits) => {
+  if (!benefits) return [];
+  
+  // Si es string, intentar parsear
+  if (typeof benefits === 'string') {
+    try {
+      const parsed = JSON.parse(benefits);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  
+  // Si ya es array, retornar
+  if (Array.isArray(benefits)) {
+    return benefits;
+  }
+  
+  return [];
+};
+
 const transformOrderItem = (item) => {
   if (!item) return null;
   const product = item.product || item.products || {};
@@ -129,7 +166,9 @@ const transformOrder = (order) => {
   return {
     ...order,
     total: toNumber(order.total),
+    subtotal: toNumber(order.subtotal),
     discount: toNumber(order.discount),
+    shipping_cost: toNumber(order.shipping_cost),
     shipping_address: shippingAddress,
     shippingAddress,
     payment_info: paymentInfo,
@@ -147,63 +186,78 @@ const transformOrder = (order) => {
 export const authService = {
   // Login con email y contraseña
   login: async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) handleSupabaseError(error, 'Error al iniciar sesión');
-    
-    console.log('Login exitoso, obteniendo perfil...');
-    
-    // Obtener datos completos del usuario desde la tabla profiles
-    // Intentar múltiples veces por si hay delay en RLS
-    let profile = null;
-    let profileError = null;
-    
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data: profileData, error: err } = await supabase
+    try {
+      // Login directo sin timeout (Supabase ya tiene timeout interno)
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) handleSupabaseError(error, 'Error al iniciar sesión');
+      
+      console.log('Login exitoso, obteniendo perfil...');
+      
+      // Obtener datos completos del usuario desde la tabla profiles
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
       
-      if (!err && profileData) {
-        profile = profileData;
-        break;
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.warn('Error al obtener perfil:', profileError.message);
       }
       
-      profileError = err;
-      console.warn(`Intento ${attempt + 1} de obtener perfil falló:`, err?.message);
-      
-      // Esperar un poco antes de reintentar
-      if (attempt < 2) {
-        await new Promise(resolve => setTimeout(resolve, 300));
+      // Si no hay perfil, crearlo automáticamente
+      let userProfile = profile;
+      if (!userProfile) {
+        console.log('Perfil no encontrado, creando uno nuevo...');
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || data.user.email,
+            role: data.user.user_metadata?.role || 'user',
+            benefits: normalizeBenefits(data.user.user_metadata?.benefits)
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.warn('No se pudo crear perfil automático:', createError.message);
+          // Usar datos básicos del auth
+          userProfile = {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || data.user.email,
+            role: data.user.user_metadata?.role || 'user',
+            benefits: normalizeBenefits(data.user.user_metadata?.benefits)
+          };
+        } else {
+          userProfile = newProfile;
+        }
       }
-    }
-    
-    // Si después de 3 intentos no hay perfil, usar datos del auth.user
-    if (!profile) {
-      console.warn('No se pudo obtener perfil desde DB, usando datos de autenticación');
-      profile = {
-        id: data.user.id,
-        email: data.user.email,
-        name: data.user.user_metadata?.name || data.user.email,
-        role: data.user.user_metadata?.role || 'user',
-        benefits: data.user.user_metadata?.benefits || []
+      
+      // Normalizar benefits del perfil
+      if (userProfile.benefits) {
+        userProfile.benefits = normalizeBenefits(userProfile.benefits);
+      }
+      
+      return {
+        data: {
+          user: {
+            id: data.user.id,
+            email: data.user.email,
+            ...userProfile,
+          },
+          session: data.session,
+        }
       };
+    } catch (error) {
+      console.error('Error en login:', error);
+      throw error;
     }
-    
-    return {
-      data: {
-        user: {
-          id: data.user.id,
-          email: data.user.email,
-          ...profile,
-        },
-        session: data.session,
-      }
-    };
   },
 
   // Registro de nuevo usuario
@@ -241,7 +295,7 @@ export const authService = {
         .from('profiles')
         .select('*')
         .eq('id', authData.user.id)
-        .single();
+        .maybeSingle(); // Usar maybeSingle() para permitir null
       
       if (!error && data) {
         profile = data;
@@ -262,7 +316,7 @@ export const authService = {
           name,
           phone: phone || '',
           role: 'user',
-          benefits: benefits,
+          benefits: Array.isArray(benefits) ? benefits : [], // Asegurar que sea array
         }])
         .select()
         .single();
@@ -274,7 +328,7 @@ export const authService = {
           .from('profiles')
           .select('*')
           .eq('id', authData.user.id)
-          .single();
+          .maybeSingle(); // Usar maybeSingle() para permitir null
         
         if (!retryProfile) {
           throw new Error('No se pudo crear el perfil del usuario');
@@ -291,6 +345,7 @@ export const authService = {
           id: authData.user.id,
           email: authData.user.email,
           ...finalProfile,
+          benefits: normalizeBenefits(finalProfile.benefits)
         },
         session: authData.session,
       }
@@ -326,14 +381,24 @@ export const authService = {
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle(); // Usar maybeSingle() para permitir null
     
-    if (profileError) return { id: user.id, email: user.email };
+    if (profileError || !profile) {
+      // Si no hay perfil, retornar datos básicos del usuario
+      return { 
+        id: user.id, 
+        email: user.email,
+        name: user.user_metadata?.name || user.email,
+        role: user.user_metadata?.role || 'user',
+        benefits: normalizeBenefits(user.user_metadata?.benefits)
+      };
+    }
     
     return {
       id: user.id,
       email: user.email,
       ...profile,
+      benefits: normalizeBenefits(profile.benefits)
     };
   },
 };
@@ -590,7 +655,7 @@ export const orderService = {
   },
 
   getById: async (id) => {
-    const session = await checkAuth();
+    await requireAdmin();
     
     const { data, error } = await supabase
       .from('orders')
@@ -610,64 +675,69 @@ export const orderService = {
       .single();
     
     if (error) handleSupabaseError(error, 'Error al obtener pedido');
-    
-    // Verificar que el usuario sea dueño de la orden (las políticas RLS ya lo hacen, pero verificamos por seguridad)
-    if (data && data.user_id !== session.user.id) {
-      throw new Error('No tienes permiso para ver este pedido');
-    }
-    
     return { data: transformOrder(data) };
   },
 
   create: async (orderData) => {
-    await checkAuth();
-    
+    // Intentar obtener sesión pero NO requerir autenticación (permite compras de invitados)
     const session = await supabase.auth.getSession();
-    const userId = session.data.session?.user?.id;
+    let userId = session.data.session?.user?.id || null;
     
-    if (!userId) {
-      throw new Error('Usuario no autenticado');
+    console.log('Creando orden con userId:', userId || 'invitado');
+    
+    // Si hay un userId, verificar que exista en profiles (por si acaso)
+    if (userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      // Si el usuario no tiene perfil, crearlo ahora
+      if (!profile) {
+        console.warn('Usuario sin perfil detectado, creando perfil...');
+        const user = session.data.session.user;
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: userId,
+            email: user.email,
+            name: user.user_metadata?.name || user.email,
+            phone: user.user_metadata?.phone || '',
+            role: 'user',
+            benefits: []
+          }]);
+        
+        if (profileError) {
+          console.error('Error al crear perfil:', profileError);
+          // Si falla, proceder sin user_id (como invitado)
+          console.warn('Procediendo como invitado debido a error en perfil');
+          userId = null;
+        } else {
+          console.log('Perfil creado exitosamente');
+        }
+      }
     }
     
-    // Validar datos de entrada
-    if (!orderData.items || orderData.items.length === 0) {
-      throw new Error('El pedido debe contener al menos un producto');
-    }
-    
-    if (!orderData.shippingAddress || typeof orderData.shippingAddress !== 'object') {
-      throw new Error('Dirección de envío inválida');
-    }
-    
-    console.log('Creando pedido:', {
-      userId,
-      code: orderData.code,
-      total: orderData.total,
-      itemsCount: orderData.items.length,
-      items: orderData.items
-    });
-    
-    // Crear el pedido
+    // Crear el pedido (user_id puede ser null para invitados)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert([{
-        user_id: userId,
+        user_id: userId, // Puede ser null para invitados
         code: orderData.code,
         status: orderData.status || 'pending',
         total: orderData.total,
+        subtotal: orderData.subtotal || orderData.total,
         discount: orderData.discount || 0,
+        shipping_cost: orderData.shipping_cost || 0,
         shipping_address: orderData.shippingAddress,
         payment_info: orderData.paymentInfo,
-        notes: orderData.notes || '',
+        notes: orderData.notes,
       }])
       .select()
       .single();
     
-    if (orderError) {
-      console.error('Error al insertar orden en Supabase:', orderError);
-      handleSupabaseError(orderError, 'Error al crear pedido');
-    }
-    
-    console.log('Pedido creado exitosamente:', order);
+    if (orderError) handleSupabaseError(orderError, 'Error al crear pedido');
     
     // Crear los items del pedido
     if (orderData.items && orderData.items.length > 0) {
@@ -678,23 +748,22 @@ export const orderService = {
         price: item.price,
       }));
       
-      console.log('Insertando items del pedido:', orderItems);
-      
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
       
-      if (itemsError) {
-        console.error('Error al insertar items del pedido:', itemsError);
-        handleSupabaseError(itemsError, 'Error al crear items del pedido');
-      }
-      
-      console.log('Items del pedido creados exitosamente');
+      if (itemsError) handleSupabaseError(itemsError, 'Error al crear items del pedido');
     }
     
-    // Retornar la orden creada directamente
-    console.log('Orden completa creada exitosamente:', order);
-    return { data: transformOrder({ ...order, order_items: [] }) };
+    // Retornar la orden creada directamente sin llamar a getById (que requiere admin)
+    // Construir el objeto de respuesta con los datos que ya tenemos
+    return { 
+      data: {
+        ...order,
+        items: orderData.items || [],
+        user: userId ? { id: userId } : null
+      } 
+    };
   },
 
   updateStatus: async (id, status) => {
@@ -740,6 +809,130 @@ export const orderService = {
     const transformed = Array.isArray(data) ? data.map(transformOrder) : [];
     return { data: transformed };
   },
+};
+
+// ==================== DIRECCIONES GUARDADAS ====================
+export const savedAddressService = {
+  // Obtener todas las direcciones del usuario autenticado
+  getAll: async () => {
+    await checkAuth();
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session.user.id;
+    
+    const { data, error } = await supabase
+      .from('saved_addresses')
+      .select('*')
+      .eq('user_id', userId)
+      .order('is_default', { ascending: false })
+      .order('created_at', { ascending: false });
+    
+    if (error) handleSupabaseError(error, 'Error al obtener direcciones');
+    return { data: data || [] };
+  },
+
+  // Obtener dirección por defecto
+  getDefault: async () => {
+    await checkAuth();
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session.user.id;
+    
+    const { data, error } = await supabase
+      .from('saved_addresses')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_default', true)
+      .maybeSingle();
+    
+    if (error && error.code !== 'PGRST116') {
+      handleSupabaseError(error, 'Error al obtener dirección por defecto');
+    }
+    return { data };
+  },
+
+  // Crear nueva dirección
+  create: async (addressData) => {
+    await checkAuth();
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session.user.id;
+    
+    const { data, error } = await supabase
+      .from('saved_addresses')
+      .insert([{
+        user_id: userId,
+        label: addressData.label,
+        nombre: addressData.nombre,
+        correo: addressData.correo,
+        telefono: addressData.telefono,
+        calle: addressData.calle,
+        depto: addressData.depto,
+        codigo_postal: addressData.codigoPostal,
+        region: addressData.region,
+        comuna: addressData.comuna,
+        is_default: addressData.isDefault || false
+      }])
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error, 'Error al guardar dirección');
+    return { data };
+  },
+
+  // Actualizar dirección existente
+  update: async (id, addressData) => {
+    await checkAuth();
+    
+    const { data, error } = await supabase
+      .from('saved_addresses')
+      .update({
+        label: addressData.label,
+        nombre: addressData.nombre,
+        correo: addressData.correo,
+        telefono: addressData.telefono,
+        calle: addressData.calle,
+        depto: addressData.depto,
+        codigo_postal: addressData.codigoPostal,
+        region: addressData.region,
+        comuna: addressData.comuna,
+        is_default: addressData.isDefault || false
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error, 'Error al actualizar dirección');
+    return { data };
+  },
+
+  // Eliminar dirección
+  delete: async (id) => {
+    await checkAuth();
+    
+    const { error } = await supabase
+      .from('saved_addresses')
+      .delete()
+      .eq('id', id);
+    
+    if (error) handleSupabaseError(error, 'Error al eliminar dirección');
+    return { data: { success: true } };
+  },
+
+  // Establecer dirección como predeterminada
+  setAsDefault: async (id) => {
+    await checkAuth();
+    
+    const { data, error } = await supabase
+      .from('saved_addresses')
+      .update({ is_default: true })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) handleSupabaseError(error, 'Error al establecer dirección predeterminada');
+    return { data };
+  }
 };
 
 // Mantener compatibilidad con código legacy

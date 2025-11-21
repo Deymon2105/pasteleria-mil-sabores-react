@@ -73,6 +73,10 @@ export default function Header(){
                       <i className="bi bi-bag-check me-2"></i>
                       Mis Pedidos
                     </Dropdown.Item>
+                    <Dropdown.Item as={Link} to="/my-addresses">
+                      <i className="bi bi-geo-alt me-2"></i>
+                      Mis Direcciones
+                    </Dropdown.Item>
                     {isAdmin() && (
                       <>
                         <Dropdown.Divider />
