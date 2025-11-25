@@ -63,14 +63,26 @@ const requireAdmin = async () => {
     .from('profiles')
     .select('role')
     .eq('id', session.user.id)
-    .single();
+    .maybeSingle();
 
-  if (error) handleSupabaseError(error, 'Error al validar permisos');
-  if (!profile || profile.role !== 'admin') {
+  if (error) {
+    console.error('Error al validar permisos de admin:', error);
+    handleSupabaseError(error, 'Error al validar permisos');
+  }
+  
+  if (!profile) {
+    console.error('No se encontró perfil para el usuario:', session.user.id);
+    window.dispatchEvent(new Event('forbidden'));
+    throw new Error('Perfil de usuario no encontrado');
+  }
+  
+  if (profile.role !== 'admin') {
+    console.warn('Usuario sin permisos de admin:', profile.role);
     window.dispatchEvent(new Event('forbidden'));
     throw new Error('Acceso restringido: se requiere rol de administrador');
   }
 
+  console.log('✅ Usuario admin verificado:', session.user.email);
   return session;
 };
 
@@ -90,9 +102,9 @@ const transformProductToSupabase = (product) => {
   const { title, desc, img, ...rest } = product;
   return {
     ...rest,
-    name: title || product.name,
-    description: desc || product.description,
-    image: img || product.image
+    name: title || rest.name || product.name,
+    description: desc || rest.description || product.description,
+    image: img || rest.image || product.image
   };
 };
 
@@ -476,8 +488,24 @@ export const productService = {
   create: async (product) => {
     await requireAdmin();
     
+    console.log('📦 Creando producto:', product);
+    
+    // Validar campos obligatorios
+    if (!product.name && !product.title) {
+      throw new Error('El nombre del producto es obligatorio');
+    }
+    if (!product.image && !product.img) {
+      throw new Error('La imagen del producto es obligatoria');
+    }
+    
     // Transformar producto al formato de Supabase
     const productData = transformProductToSupabase(product);
+    
+    // Asegurar que price sea numérico
+    productData.price = Number(productData.price) || 0;
+    productData.stock = Number(productData.stock) || 0;
+    
+    console.log('📤 Datos a enviar a Supabase:', productData);
     
     const { data, error } = await supabase
       .from('products')
@@ -485,8 +513,12 @@ export const productService = {
       .select()
       .single();
     
-    if (error) handleSupabaseError(error, 'Error al crear producto');
+    if (error) {
+      console.error('❌ Error al crear producto:', error);
+      handleSupabaseError(error, 'Error al crear producto');
+    }
     
+    console.log('✅ Producto creado exitosamente:', data);
     return { data: transformProduct(data) };
   },
 
@@ -809,6 +841,102 @@ export const orderService = {
     const transformed = Array.isArray(data) ? data.map(transformOrder) : [];
     return { data: transformed };
   },
+};
+
+// ==================== UPLOAD DE IMÁGENES ====================
+export const uploadService = {
+  /**
+   * Subir imagen a Supabase Storage
+   * @param {File} file - Archivo de imagen a subir
+   * @param {string} bucket - Nombre del bucket (default: 'product-images')
+   * @returns {Promise<string>} URL pública de la imagen subida
+   */
+  uploadImage: async (file, bucket = 'product-images') => {
+    try {
+      // Validar que sea un archivo de imagen
+      if (!file.type.startsWith('image/')) {
+        throw new Error('El archivo debe ser una imagen');
+      }
+
+      // Validar tamaño (máximo 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        throw new Error('La imagen no debe superar los 5MB');
+      }
+
+      // Generar nombre único para el archivo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      console.log('📤 Subiendo imagen a Supabase Storage:', filePath);
+
+      // Subir archivo a Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('❌ Error al subir imagen:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('📥 Archivo subido, obteniendo URL pública...');
+
+      // Obtener URL pública de la imagen
+      const { data: urlData } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(filePath);
+
+      const publicUrl = urlData.publicUrl;
+
+      if (!publicUrl) {
+        throw new Error('No se pudo obtener la URL pública de la imagen');
+      }
+
+      console.log('✅ Imagen subida exitosamente:', publicUrl);
+      return publicUrl;
+    } catch (error) {
+      console.error('Error en uploadImage:', error);
+      throw new Error(error.message || 'Error al subir la imagen');
+    }
+  },
+
+  /**
+   * Eliminar imagen de Supabase Storage
+   * @param {string} imageUrl - URL de la imagen a eliminar
+   * @param {string} bucket - Nombre del bucket (default: 'product-images')
+   */
+  deleteImage: async (imageUrl, bucket = 'product-images') => {
+    try {
+      // Extraer el path del archivo desde la URL
+      const urlParts = imageUrl.split('/storage/v1/object/public/' + bucket + '/');
+      if (urlParts.length < 2) {
+        console.warn('URL de imagen inválida, no se puede eliminar:', imageUrl);
+        return;
+      }
+      
+      const filePath = urlParts[1];
+      console.log('🗑️ Eliminando imagen:', filePath);
+
+      const { error } = await supabase.storage
+        .from(bucket)
+        .remove([filePath]);
+
+      if (error) {
+        console.error('Error al eliminar imagen:', error);
+        throw error;
+      }
+
+      console.log('✅ Imagen eliminada exitosamente');
+    } catch (error) {
+      console.error('Error en deleteImage:', error);
+      // No lanzar error, solo registrar (la eliminación de imagen es opcional)
+    }
+  }
 };
 
 // ==================== DIRECCIONES GUARDADAS ====================

@@ -23,16 +23,32 @@ export default function useAdminData(){
       setLoading(true)
       setError(null)
       
+      console.log('📊 Cargando datos del panel admin...')
+      
       const [ordersResponse, usersResponse] = await Promise.all([
-        orderService.getAll(),
-        userService.getAll()
+        orderService.getAll().catch(err => {
+          console.error('Error al cargar órdenes:', err)
+          return { data: [] }
+        }),
+        userService.getAll().catch(err => {
+          console.error('Error al cargar usuarios:', err)
+          return { data: [] }
+        })
       ])
+      
+      console.log('✅ Datos cargados:', {
+        orders: ordersResponse.data?.length || 0,
+        users: usersResponse.data?.length || 0
+      })
       
       setOrders(ordersResponse.data || [])
       setUsers(usersResponse.data || [])
     } catch (err) {
-      console.error('Error al cargar datos admin:', err)
+      console.error('❌ Error al cargar datos admin:', err)
       setError('Error al cargar datos del panel de administración')
+      // No bloquear la UI, permitir arrays vacíos
+      setOrders([])
+      setUsers([])
     } finally {
       setLoading(false)
     }

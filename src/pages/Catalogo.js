@@ -17,7 +17,7 @@ export default function Catalogo() {
   // Cargar productos desde la API al montar el componente
   useEffect(() => {
     loadProducts()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadProducts = async () => {
     try {
@@ -35,14 +35,14 @@ export default function Catalogo() {
 
   // ✅ Buscar productos usando la API
   useEffect(() => {
-    const searchProducts = async () => {
-      if (searchTerm.trim() === '') {
-        // Si el campo está vacío, cargar todos los productos
-        loadProducts()
-        return
-      }
+    // No hacer nada si no hay término de búsqueda
+    if (searchTerm.trim() === '') {
+      return
+    }
 
+    const searchProducts = async () => {
       try {
+        setLoading(true)
         setError(null)
         const response = await productService.search(searchTerm)
         setProducts(response.data)
@@ -50,12 +50,16 @@ export default function Catalogo() {
       } catch (err) {
         console.error('Error al buscar productos:', err)
         setError('Error al buscar productos. Por favor, intenta de nuevo.')
+      } finally {
+        setLoading(false)
       }
     }
 
+    // Debounce de 500ms
     const timeoutId = setTimeout(() => {
       searchProducts()
     }, 500)
+    
     return () => clearTimeout(timeoutId)
   }, [searchTerm])
 

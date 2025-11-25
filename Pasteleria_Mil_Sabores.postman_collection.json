@@ -1,0 +1,1144 @@
+{
+	"info": {
+		"_postman_id": "b2c3d4e5-f6g7-8901-bcde-fg2345678901",
+		"name": "Pastelería Mil Sabores - API FIXED",
+		"description": "Colección 100% funcional y probada para la API de Pastelería Mil Sabores",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "🔐 Autenticación",
+			"item": [
+				{
+					"name": "1. Registro de Usuario",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"    pm.environment.set(\"refresh_token\", jsonData.refresh_token);",
+									"    console.log('✅ Usuario registrado exitosamente');",
+									"    console.log('User ID:', jsonData.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@pasteleria.com\",\n  \"password\": \"Password123!\",\n  \"data\": {\n    \"name\": \"Usuario Test\",\n    \"phone\": \"+56912345678\",\n    \"benefits\": []\n  }\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/auth/v1/signup",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"auth",
+								"v1",
+								"signup"
+							]
+						},
+						"description": "Registrar un nuevo usuario. El perfil se crea automáticamente por trigger."
+					},
+					"response": []
+				},
+				{
+					"name": "2. Login de Usuario",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"    pm.environment.set(\"refresh_token\", jsonData.refresh_token);",
+									"    console.log('✅ Login exitoso');",
+									"    console.log('User ID:', jsonData.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@pasteleria.com\",\n  \"password\": \"Password123!\"\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/auth/v1/token?grant_type=password",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"auth",
+								"v1",
+								"token"
+							],
+							"query": [
+								{
+									"key": "grant_type",
+									"value": "password"
+								}
+							]
+						},
+						"description": "Iniciar sesión con credenciales de usuario"
+					},
+					"response": []
+				},
+				{
+					"name": "3. Obtener Usuario Actual",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/auth/v1/user",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"auth",
+								"v1",
+								"user"
+							]
+						},
+						"description": "Obtener información del usuario autenticado actual"
+					},
+					"response": []
+				},
+				{
+					"name": "4. Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/auth/v1/logout",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"auth",
+								"v1",
+								"logout"
+							]
+						},
+						"description": "Cerrar sesión del usuario actual"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "👤 Perfiles",
+			"item": [
+				{
+					"name": "5. Obtener Mi Perfil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/profiles?id=eq.{{user_id}}&select=*",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "eq.{{user_id}}"
+								},
+								{
+									"key": "select",
+									"value": "*"
+								}
+							]
+						},
+						"description": "Obtener el perfil del usuario autenticado"
+					},
+					"response": []
+				},
+				{
+					"name": "6. Actualizar Mi Perfil",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "return=representation",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Usuario Actualizado\",\n  \"phone\": \"+56987654321\"\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/profiles?id=eq.{{user_id}}",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "eq.{{user_id}}"
+								}
+							]
+						},
+						"description": "Actualizar datos del propio perfil"
+					},
+					"response": []
+				},
+				{
+					"name": "7. Obtener Todos los Perfiles (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/profiles?select=*&order=created_at.desc",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "select",
+									"value": "*"
+								},
+								{
+									"key": "order",
+									"value": "created_at.desc"
+								}
+							]
+						},
+						"description": "Listar todos los perfiles (requiere rol admin)"
+					},
+					"response": []
+				},
+				{
+					"name": "8. Actualizar Rol de Usuario (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "return=representation",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"admin\",\n  \"benefits\": [\"VIP\", \"Employee\"]\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/profiles?id=eq.{{user_id}}",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"profiles"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "eq.{{user_id}}"
+								}
+							]
+						},
+						"description": "Actualizar rol y beneficios de usuario (requiere admin)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🍰 Productos",
+			"item": [
+				{
+					"name": "9. Obtener Todos los Productos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const products = pm.response.json();",
+									"    if (products.length > 0) {",
+									"        pm.environment.set(\"product_id\", products[0].id);",
+									"        console.log('✅ Productos obtenidos:', products.length);",
+									"        console.log('Product ID guardado:', products[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/products?select=*&order=created_at.desc",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"products"
+							],
+							"query": [
+								{
+									"key": "select",
+									"value": "*"
+								},
+								{
+									"key": "order",
+									"value": "created_at.desc"
+								}
+							]
+						},
+						"description": "Listar todos los productos (público, no requiere auth)"
+					},
+					"response": []
+				},
+				{
+					"name": "10. Obtener Productos Destacados",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/products?featured=eq.true&select=*&order=created_at.desc",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"products"
+							],
+							"query": [
+								{
+									"key": "featured",
+									"value": "eq.true"
+								},
+								{
+									"key": "select",
+									"value": "*"
+								},
+								{
+									"key": "order",
+									"value": "created_at.desc"
+								}
+							]
+						},
+						"description": "Obtener solo productos destacados"
+					},
+					"response": []
+				},
+				{
+					"name": "11. Buscar Productos por Nombre",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/products?or=(name.ilike.*chocolate*,description.ilike.*chocolate*)&select=*",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"products"
+							],
+							"query": [
+								{
+									"key": "or",
+									"value": "(name.ilike.*chocolate*,description.ilike.*chocolate*)"
+								},
+								{
+									"key": "select",
+									"value": "*"
+								}
+							]
+						},
+						"description": "Buscar productos por nombre o descripción"
+					},
+					"response": []
+				},
+				{
+					"name": "12. Crear Producto (Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const products = pm.response.json();",
+									"    if (products.length > 0) {",
+									"        pm.environment.set(\"product_id\", products[0].id);",
+									"        console.log('✅ Producto creado con ID:', products[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "return=representation",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Torta Prueba API\",\n  \"description\": \"Producto creado desde Postman\",\n  \"price\": 15000,\n  \"category\": \"Tortas\",\n  \"image\": \"/img/test.jpg\",\n  \"featured\": false,\n  \"stock\": 10\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/products",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"products"
+							]
+						},
+						"description": "Crear un nuevo producto (requiere rol admin)"
+					},
+					"response": []
+				},
+				{
+					"name": "13. Actualizar Producto (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "return=representation",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"price\": 18000,\n  \"stock\": 20,\n  \"featured\": true\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/products?id=eq.{{product_id}}",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"products"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "eq.{{product_id}}"
+								}
+							]
+						},
+						"description": "Actualizar un producto existente (requiere admin)"
+					},
+					"response": []
+				},
+				{
+					"name": "14. Eliminar Producto (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/products?id=eq.{{product_id}}",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"products"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "eq.{{product_id}}"
+								}
+							]
+						},
+						"description": "Eliminar un producto (requiere admin, falla si hay órdenes asociadas)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📦 Pedidos",
+			"item": [
+				{
+					"name": "15. Crear Pedido (Guest o User)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const orders = pm.response.json();",
+									"    if (orders.length > 0) {",
+									"        pm.environment.set(\"order_id\", orders[0].id);",
+									"        console.log('✅ Pedido creado con ID:', orders[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generar código único de pedido",
+									"const timestamp = Date.now();",
+									"const orderCode = `ORD-${timestamp}`;",
+									"pm.environment.set('order_code', orderCode);",
+									"console.log('Código de pedido generado:', orderCode);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "return=representation",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": null,\n  \"code\": \"{{order_code}}\",\n  \"status\": \"pending\",\n  \"total\": 50000,\n  \"subtotal\": 45000,\n  \"discount\": 0,\n  \"shipping_cost\": 5000,\n  \"shipping_address\": {\n    \"nombre\": \"Cliente Test\",\n    \"correo\": \"cliente@ejemplo.com\",\n    \"telefono\": \"+56912345678\",\n    \"calle\": \"Av. Test 123\",\n    \"depto\": \"Apto 4B\",\n    \"codigoPostal\": \"8320000\",\n    \"region\": \"Metropolitana\",\n    \"comuna\": \"Santiago\"\n  },\n  \"payment_info\": {\n    \"method\": \"credit_card\",\n    \"last4\": \"4242\"\n  },\n  \"notes\": \"Pedido de prueba desde Postman\"\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/orders",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"orders"
+							]
+						},
+						"description": "Crear pedido como invitado (user_id: null) o usuario autenticado"
+					},
+					"response": []
+				},
+				{
+					"name": "16. Crear Items del Pedido",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "return=representation",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"order_id\": \"{{order_id}}\",\n    \"product_id\": \"{{product_id}}\",\n    \"quantity\": 2,\n    \"price\": 25000\n  }\n]"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/order_items",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"order_items"
+							]
+						},
+						"description": "Agregar items al pedido. El trigger verificará stock y lo descontará automáticamente."
+					},
+					"response": []
+				},
+				{
+					"name": "17. Obtener Mis Pedidos (Usuario)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/orders?user_id=eq.{{user_id}}&select=*,order_items(id,quantity,price,product:products(id,name,image,price))&order=created_at.desc",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "user_id",
+									"value": "eq.{{user_id}}"
+								},
+								{
+									"key": "select",
+									"value": "*,order_items(id,quantity,price,product:products(id,name,image,price))"
+								},
+								{
+									"key": "order",
+									"value": "created_at.desc"
+								}
+							]
+						},
+						"description": "Ver historial de pedidos del usuario autenticado"
+					},
+					"response": []
+				},
+				{
+					"name": "18. Obtener Todos los Pedidos (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "count=exact",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/orders?select=*,user:profiles(id,name,email),order_items(id,quantity,price,product:products(id,name,price,image))&order=created_at.desc&limit=20",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "select",
+									"value": "*,user:profiles(id,name,email),order_items(id,quantity,price,product:products(id,name,price,image))"
+								},
+								{
+									"key": "order",
+									"value": "created_at.desc"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Ver todos los pedidos con relaciones (requiere admin)"
+					},
+					"response": []
+				},
+				{
+					"name": "19. Actualizar Estado de Pedido (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "return=representation",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"processing\"\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/orders?id=eq.{{order_id}}",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "eq.{{order_id}}"
+								}
+							]
+						},
+						"description": "Cambiar estado: pending, processing, shipped, delivered, cancelled"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📍 Direcciones Guardadas",
+			"item": [
+				{
+					"name": "20. Obtener Mis Direcciones",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/saved_addresses?user_id=eq.{{user_id}}&select=*&order=is_default.desc,created_at.desc",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"saved_addresses"
+							],
+							"query": [
+								{
+									"key": "user_id",
+									"value": "eq.{{user_id}}"
+								},
+								{
+									"key": "select",
+									"value": "*"
+								},
+								{
+									"key": "order",
+									"value": "is_default.desc,created_at.desc"
+								}
+							]
+						},
+						"description": "Listar todas las direcciones guardadas del usuario"
+					},
+					"response": []
+				},
+				{
+					"name": "21. Crear Dirección",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const addresses = pm.response.json();",
+									"    if (addresses.length > 0) {",
+									"        pm.environment.set(\"address_id\", addresses[0].id);",
+									"        console.log('✅ Dirección creada con ID:', addresses[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "return=representation",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"label\": \"Casa\",\n  \"nombre\": \"Usuario Test\",\n  \"correo\": \"test@pasteleria.com\",\n  \"telefono\": \"+56912345678\",\n  \"calle\": \"Av. Principal 123\",\n  \"depto\": \"Depto 4B\",\n  \"codigo_postal\": \"8320000\",\n  \"region\": \"Metropolitana\",\n  \"comuna\": \"Santiago\",\n  \"is_default\": true\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/saved_addresses",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"saved_addresses"
+							]
+						},
+						"description": "Guardar nueva dirección de envío"
+					},
+					"response": []
+				},
+				{
+					"name": "22. Actualizar Dirección",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Prefer",
+								"value": "return=representation",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"label\": \"Casa Actualizada\",\n  \"telefono\": \"+56987654321\"\n}"
+						},
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/saved_addresses?id=eq.{{address_id}}",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"saved_addresses"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "eq.{{address_id}}"
+								}
+							]
+						},
+						"description": "Modificar una dirección existente"
+					},
+					"response": []
+				},
+				{
+					"name": "23. Eliminar Dirección",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "apikey",
+								"value": "{{supabase_anon_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{supabase_url}}/rest/v1/saved_addresses?id=eq.{{address_id}}",
+							"host": [
+								"{{supabase_url}}"
+							],
+							"path": [
+								"rest",
+								"v1",
+								"saved_addresses"
+							],
+							"query": [
+								{
+									"key": "id",
+									"value": "eq.{{address_id}}"
+								}
+							]
+						},
+						"description": "Borrar una dirección guardada"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

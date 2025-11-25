@@ -61,6 +61,7 @@
     "karma-sourcemap-loader": "^0.4.0",
     "karma-webpack": "^5.0.1",
     "phantomjs-prebuilt": "^2.1.16",
-    "style-loader": "^4.0.0"
+    "style-loader": "^4.0.0",
+    "xlsx": "^0.18.5"
   }
 }

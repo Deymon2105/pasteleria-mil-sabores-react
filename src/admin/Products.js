@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react'
-import { productService } from '../service/api'
+import { productService, uploadService } from '../service/api'
 
 export default function Products(){
   const [products, setProducts] = useState([])
@@ -8,6 +8,19 @@ export default function Products(){
   const [filter, setFilter] = useState('all')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [newProduct, setNewProduct] = useState({
+    title: '',
+    price: '',
+    category: 'Tortas',
+    description: '',
+    image: '',
+    stock: 10,
+    featured: false
+  })
 
   useEffect(() => {
     loadProducts()
@@ -24,6 +37,32 @@ export default function Products(){
       setError('Error al cargar productos')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      // Validar que sea una imagen
+      if (!file.type.startsWith('image/')) {
+        alert('❌ Por favor selecciona un archivo de imagen')
+        return
+      }
+      
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('❌ La imagen no debe superar los 5MB')
+        return
+      }
+      
+      setImageFile(file)
+      
+      // Crear preview de la imagen
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result)
+      }
+      reader.readAsDataURL(file)
     }
   }
 
@@ -84,6 +123,80 @@ export default function Products(){
     }
   }
 
+  const handleCreateProduct = async () => {
+    try {
+      // Validar campos obligatorios
+      if (!newProduct.title.trim()) {
+        alert('El nombre del producto es obligatorio')
+        return
+      }
+      
+      // Validar que haya imagen (archivo o URL)
+      if (!imageFile && !newProduct.image.trim()) {
+        alert('Debes subir una imagen o proporcionar una URL')
+        return
+      }
+      
+      if (!newProduct.price || Number(newProduct.price) <= 0) {
+        alert('El precio debe ser mayor a 0')
+        return
+      }
+
+      setLoading(true)
+      setUploadProgress(10)
+      
+      // Subir imagen a Supabase Storage si hay archivo seleccionado
+      let imageUrl = newProduct.image
+      if (imageFile) {
+        console.log('📤 Subiendo imagen a Supabase Storage...')
+        setUploadProgress(30)
+        imageUrl = await uploadService.uploadImage(imageFile)
+        setUploadProgress(60)
+        console.log('✅ Imagen subida:', imageUrl)
+      }
+      
+      // Preparar datos del producto (usar solo los campos que acepta Supabase)
+      const productData = {
+        name: newProduct.title,
+        price: Number(newProduct.price),
+        category: newProduct.category,
+        description: newProduct.description || `Delicioso ${newProduct.title}`,
+        image: imageUrl,
+        stock: Number(newProduct.stock) || 10,
+        featured: newProduct.featured || false
+      }
+
+      setUploadProgress(80)
+      console.log('🔵 Creando producto:', productData)
+      await productService.create(productData)
+      setUploadProgress(100)
+      
+      // Recargar productos y resetear formulario
+      await loadProducts()
+      setShowCreateForm(false)
+      setNewProduct({
+        title: '',
+        price: '',
+        category: 'Tortas',
+        description: '',
+        image: '',
+        stock: 10,
+        featured: false
+      })
+      setImageFile(null)
+      setImagePreview(null)
+      setUploadProgress(0)
+      
+      alert('✅ Producto creado exitosamente')
+    } catch (err) {
+      console.error('Error al crear producto:', err)
+      alert(`❌ Error al crear producto: ${err.message}`)
+    } finally {
+      setLoading(false)
+      setUploadProgress(0)
+    }
+  }
+
   const categories = [...new Set(products.map(p => p.category))]
   const filteredProducts = filter === 'all' ? products : products.filter(p => p.category === filter)
 
@@ -113,6 +226,211 @@ export default function Products(){
       {loading && (
         <div style={{position: 'fixed', top: '10px', right: '10px', background: '#007bff', color: 'white', padding: '10px', borderRadius: '5px', zIndex: 9999}}>
           Guardando cambios...
+        </div>
+      )}
+      
+      {/* Botón para crear nuevo producto */}
+      <div style={{marginBottom: '20px'}}>
+        <button 
+          className="btn" 
+          onClick={() => setShowCreateForm(!showCreateForm)}
+          style={{background: '#28a745', color: 'white', padding: '12px 24px', fontSize: '16px', fontWeight: 'bold'}}
+        >
+          {showCreateForm ? '❌ Cancelar' : '➕ Crear Nuevo Producto'}
+        </button>
+      </div>
+
+      {/* Formulario de creación de producto */}
+      {showCreateForm && (
+        <div style={{marginBottom: '30px', padding: '20px', background: '#e7f3ff', border: '2px solid #007bff', borderRadius: '8px'}}>
+          <h3 style={{marginBottom: '15px', color: '#007bff'}}>➕ Nuevo Producto</h3>
+          
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+            <div>
+              <label style={{display: 'block', marginBottom: '5px', fontWeight: 'bold'}}>Nombre del producto *</label>
+              <input 
+                className="form__input"
+                type="text"
+                placeholder="Ej: Torta de Chocolate"
+                value={newProduct.title}
+                onChange={(e) => setNewProduct({...newProduct, title: e.target.value})}
+                style={{width: '100%'}}
+              />
+            </div>
+
+            <div>
+              <label style={{display: 'block', marginBottom: '5px', fontWeight: 'bold'}}>Categoría *</label>
+              <select 
+                className="form__input"
+                value={newProduct.category}
+                onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
+                style={{width: '100%'}}
+              >
+                <option value="Tortas">Tortas</option>
+                <option value="Pasteles">Pasteles</option>
+                <option value="Cupcakes">Cupcakes</option>
+                <option value="Galletas">Galletas</option>
+                <option value="Postres">Postres</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{display: 'block', marginBottom: '5px', fontWeight: 'bold'}}>Precio (CLP) *</label>
+              <input 
+                className="form__input"
+                type="number"
+                placeholder="15000"
+                value={newProduct.price}
+                onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                style={{width: '100%'}}
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label style={{display: 'block', marginBottom: '5px', fontWeight: 'bold'}}>Stock inicial</label>
+              <input 
+                className="form__input"
+                type="number"
+                placeholder="10"
+                value={newProduct.stock}
+                onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})}
+                style={{width: '100%'}}
+                min="0"
+              />
+            </div>
+
+            <div style={{gridColumn: '1 / -1'}}>
+              <label style={{display: 'block', marginBottom: '10px', fontWeight: 'bold'}}>Imagen del producto *</label>
+              
+              {/* Input de archivo */}
+              <div style={{marginBottom: '10px'}}>
+                <input 
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  style={{
+                    display: 'block',
+                    padding: '10px',
+                    border: '2px dashed #ccc',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    width: '100%'
+                  }}
+                />
+                <small style={{color: '#666', display: 'block', marginTop: '5px'}}>
+                  📁 Selecciona una imagen (máx 5MB) - JPG, PNG, WebP
+                </small>
+              </div>
+
+              {/* Preview de la imagen */}
+              {imagePreview && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  textAlign: 'center'
+                }}>
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '200px',
+                      borderRadius: '5px',
+                      objectFit: 'contain'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageFile(null)
+                      setImagePreview(null)
+                    }}
+                    style={{
+                      marginTop: '10px',
+                      padding: '5px 15px',
+                      background: '#dc3545',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '3px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗑️ Eliminar
+                  </button>
+                </div>
+              )}
+
+              {/* Divider */}
+              <div style={{
+                margin: '15px 0',
+                textAlign: 'center',
+                color: '#999',
+                fontSize: '14px'
+              }}>- O -</div>
+
+              {/* Input de URL (alternativa) */}
+              <div>
+                <label style={{display: 'block', marginBottom: '5px', fontSize: '14px'}}>URL de imagen (opcional)</label>
+                <input 
+                  className="form__input"
+                  type="text"
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                  value={newProduct.image}
+                  onChange={(e) => setNewProduct({...newProduct, image: e.target.value})}
+                  style={{width: '100%'}}
+                  disabled={!!imageFile}
+                />
+                <small style={{color: '#666'}}>Solo si no subes archivo</small>
+              </div>
+            </div>
+
+            <div style={{gridColumn: '1 / -1'}}>
+              <label style={{display: 'block', marginBottom: '5px', fontWeight: 'bold'}}>Descripción</label>
+              <textarea 
+                className="form__input"
+                placeholder="Descripción del producto (opcional)"
+                value={newProduct.description}
+                onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                style={{width: '100%', minHeight: '80px'}}
+              />
+            </div>
+
+            <div style={{gridColumn: '1 / -1'}}>
+              <label style={{display: 'flex', alignItems: 'center', cursor: 'pointer'}}>
+                <input 
+                  type="checkbox"
+                  checked={newProduct.featured}
+                  onChange={(e) => setNewProduct({...newProduct, featured: e.target.checked})}
+                  style={{marginRight: '10px', width: '20px', height: '20px'}}
+                />
+                <span style={{fontWeight: 'bold'}}>⭐ Marcar como producto destacado</span>
+              </label>
+            </div>
+          </div>
+
+          <div style={{marginTop: '20px', display: 'flex', gap: '10px'}}>
+            <button 
+              className="btn" 
+              onClick={handleCreateProduct}
+              disabled={loading}
+              style={{background: '#28a745', color: 'white', flex: 1, padding: '12px', fontSize: '16px', fontWeight: 'bold'}}
+            >
+              {loading ? (
+                uploadProgress > 0 ? `⏳ Subiendo... ${uploadProgress}%` : '⏳ Procesando...'
+              ) : '✅ Crear Producto'}
+            </button>
+            <button 
+              className="btn" 
+              onClick={() => setShowCreateForm(false)}
+              disabled={loading}
+              style={{background: '#6c757d', color: 'white', flex: 1, padding: '12px', fontSize: '16px'}}
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
       

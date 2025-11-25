@@ -81,8 +81,15 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     setLoading(true)
     try {
+      console.log('🔐 Intentando login con:', email)
       const response = await authService.login(email, password)
       const { user, session } = response.data
+      
+      console.log('✅ Login exitoso:', {
+        email: user.email,
+        role: user.role,
+        id: user.id
+      })
       
       setCurrentUser(user)
       setSession(session)
@@ -91,7 +98,7 @@ export function AuthProvider({ children }) {
       
       return { success: true, user }
     } catch (error) {
-      console.error('Error en login:', error)
+      console.error('❌ Error en login:', error)
       return { 
         success: false, 
         error: error.message || 'Usuario o contraseña incorrectos' 
@@ -143,7 +150,13 @@ export function AuthProvider({ children }) {
   }
 
   const isAdmin = () => {
-    return currentUser?.role === 'admin'
+    const adminStatus = currentUser?.role === 'admin'
+    console.log('🔍 Verificando admin:', {
+      currentUser: currentUser?.email,
+      role: currentUser?.role,
+      isAdmin: adminStatus
+    })
+    return adminStatus
   }
 
   const isLoggedIn = () => {
